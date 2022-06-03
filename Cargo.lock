@@ -1209,8 +1209,6 @@ dependencies = [
  "sdf_glyph_renderer",
  "serde",
  "serde_json",
- "slotmap",
- "tobj",
  "wgpu",
  "winit",
 ]
@@ -1292,7 +1290,6 @@ version = "1.0.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e1e08e261d0e8f5c43123b7adf3e4ca1690d655377ac93a03b2c9d3e98de1342"
 dependencies = [
- "serde",
  "version_check",
 ]
 
@@ -1406,15 +1403,6 @@ dependencies = [
  "jpeg-decoder",
  "miniz_oxide 0.4.4",
  "weezl",
-]
-
-[[package]]
-name = "tobj"
-version = "3.2.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "33477e8d090573560f104bb924ce29e92442a064404b21be6ea59a05c95e0e66"
-dependencies = [
- "ahash",
 ]
 
 [[package]]
