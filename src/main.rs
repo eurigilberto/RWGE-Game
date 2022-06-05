@@ -1,18 +1,21 @@
-pub use rwge::gui::rect_renderer::system::GUIRects;
+use core::any::TypeId;
+
+pub use rwge::gui::rect_ui::system::GUIRects;
 mod gui_system;
 use gui_system::GUISystem;
-use rwge::{Engine, RenderTextureSlotmap, slotmap::slotmap::Slotmap};
+use rwge::{Engine, RenderTextureSlotmap, slotmap::slotmap::Slotmap, gui::rect_ui::event::UIEvent};
 
-enum DataSlotmap{
+pub enum DataSlotmap{
     Base(rwge::entity_component::EngineDataSlotmapTypes)
 }
 
-type DataSlotmaps = Slotmap<DataSlotmap>;
+pub type DataSlotmaps = Slotmap<DataSlotmap>;
 
 
 
 struct Game {
-    gui_system: GUIRects,
+    gui_system: GUISystem,
+    public_data: DataSlotmaps
 }
 
 impl Game {
@@ -21,14 +24,18 @@ impl Game {
 
         let mut render_texture_slotmap = RenderTextureSlotmap::new_with_capacity(10);
 
-        let gui_system = GUIRects::new(
+        let gui_rects = GUIRects::new(
             &engine.render_system,
             &engine.system_bind_group_layout,
             size,
             &mut render_texture_slotmap,
         );
 
-        Self { gui_system }
+        let gui_system = GUISystem::new(gui_rects);
+
+        let public_data = DataSlotmaps::new_with_capacity(20);
+
+        Self { gui_system, public_data }
     }
 }
 
@@ -42,7 +49,13 @@ impl rwge::Runtime for Game {
     {
         println!("Handle event queue log");
         for event in event_queue {
-            rwge::default_close_event_handler(event, exit_event_loop);
+            let close_event_handled = rwge::default_close_event_handler(event, exit_event_loop);
+            if !close_event_handled{
+                let gui_event = rwge::gui::rect_ui::event::default_event_transformation(event);
+                if let Some(e) = gui_event {
+                    self.gui_system.handle_event(&e, &mut self.public_data);
+                }
+            }
         }
     }
 
