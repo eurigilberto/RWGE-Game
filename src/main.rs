@@ -90,6 +90,8 @@ impl Game {
             EngineDataType::RenderTexture(render_texture_slotmap).into(),
         );
 
+        //include_bytes!()
+
         if let Some(gui_copy_texture_surface) =
             create_gui_copy_texture_to_surface(&mut public_data, &gui_rects, engine)
         {
@@ -120,8 +122,6 @@ impl rwge::Runtime for Game {
                 let size_event = RenderSystem::resize_event_transformation(event);
                 if let Some(new_size) = size_event {
                     //Resize event
-                    println!("Resize event: {}", new_size);
-
                     if let Some(DataType::Base(EngineDataType::RenderTexture(
                         render_texture_slotmap,
                     ))) = self
@@ -132,7 +132,6 @@ impl rwge::Runtime for Game {
                         for render_texture in render_texture_slotmap.get_iter_mut() {
                             if let Some(scale) = render_texture.scale_size_to_surface {
                                 let new_size_scaled = (new_size.as_vec2() * scale).as_uvec2();
-                                println!("New size scaled: {}", new_size_scaled);
                                 render_texture
                                     .resize_texture(new_size_scaled, &mut engine.render_system);
                             }
