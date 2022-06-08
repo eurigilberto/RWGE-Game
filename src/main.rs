@@ -43,9 +43,30 @@ pub struct DataKey {
 
 struct Game {
     gui_rects: GUIRects,
-    gui_copy_texture_surface: rwge::render_system::copy_texture_to_surface::CopyTextureToSurface,
+    gui_copy_texture_surface: CopyTextureToSurface,
     gui_system: GUISystem,
     public_data: PublicDataCollection<DataTypeKey, DataType>,
+}
+
+fn create_gui_copy_texture_to_surface(
+    public_data: &mut PublicDataCollection<DataTypeKey, DataType>,
+    gui_rects: &GUIRects,
+    engine: &Engine,
+) -> Option<CopyTextureToSurface> {
+    if let DataType::Base(EngineDataType::RenderTexture(render_texture_slotmap)) = public_data
+        .collection
+        .get(&DataTypeKey::Base(EngineDataTypeKey::RenderTexture))
+        .expect("No Render Texture collection was found")
+    {
+        let color_rt = render_texture_slotmap
+            .get_value(gui_rects.render_texture.color_texture_key.key)
+            .expect("Color Render Texture not found");
+        let gui_copy_texture_surface =
+            CopyTextureToSurface::new(&engine.render_system, &color_rt.texture_view);
+        Some(gui_copy_texture_surface)
+    } else {
+        None
+    }
 }
 
 impl Game {
@@ -69,16 +90,9 @@ impl Game {
             EngineDataType::RenderTexture(render_texture_slotmap).into(),
         );
 
-        if let DataType::Base(EngineDataType::RenderTexture(render_texture_slotmap)) = public_data
-            .collection
-            .get(&DataTypeKey::Base(EngineDataTypeKey::RenderTexture))
-            .expect("No Render Texture collection was found")
+        if let Some(gui_copy_texture_surface) =
+            create_gui_copy_texture_to_surface(&mut public_data, &gui_rects, engine)
         {
-            let color_rt = render_texture_slotmap
-                .get_value(gui_rects.render_texture.color_texture_key.key)
-                .expect("Color Render Texture not found");
-            let gui_copy_texture_surface =
-                CopyTextureToSurface::new(&engine.render_system, &color_rt.texture_view);
             Self {
                 gui_rects,
                 gui_system,
@@ -107,8 +121,7 @@ impl rwge::Runtime for Game {
                 if let Some(new_size) = size_event {
                     //Resize event
                     println!("Resize event: {}", new_size);
-                    self.gui_system.resize(new_size);
-                    self.gui_rects.resize(new_size, &engine.render_system);
+
                     if let Some(DataType::Base(EngineDataType::RenderTexture(
                         render_texture_slotmap,
                     ))) = self
@@ -125,6 +138,25 @@ impl rwge::Runtime for Game {
                             }
                         }
                     }
+
+                    self.gui_system.resize(new_size);
+                    self.gui_rects.resize(new_size, &engine.render_system);
+
+                    if let Some(DataType::Base(EngineDataType::RenderTexture(
+                        render_texture_slotmap,
+                    ))) = self
+                        .public_data
+                        .collection
+                        .get(&DataTypeKey::Base(EngineDataTypeKey::RenderTexture))
+                    {
+                        if let Some(color_rt) = render_texture_slotmap
+                            .get_value(self.gui_rects.render_texture.color_texture_key.key)
+                        {
+                            self.gui_copy_texture_surface
+                                .update_texture_view(&color_rt.texture_view, &engine.render_system);
+                        }
+                    }
+
                     engine.render_system.render_window.resize(new_size);
                 } else {
                     let gui_event = rwge::gui::rect_ui::event::default_event_transformation(event);
@@ -149,7 +181,7 @@ impl rwge::Runtime for Game {
         rwge::render_system::texture::clear_render_targets(
             encoder,
             screen_view,
-            RGBA::GREEN.into(),
+            RGBA::BLACK.into(),
             None,
             None,
             None,
@@ -163,7 +195,7 @@ impl rwge::Runtime for Game {
             &mut self.public_data,
         );
 
-        //self.gui_copy_texture_surface.render(encoder, screen_view);
+        self.gui_copy_texture_surface.render(encoder, screen_view);
     }
 
     fn frame_end<F>(&mut self, engine: &mut rwge::Engine, exit_event_loop: &mut F)
