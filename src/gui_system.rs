@@ -6,12 +6,12 @@ use rwge::{
     gui::rect_ui::{
         event::UIEvent,
         slotmap::{GUIContainer, GUISlotmaps},
-        system::GUIRects,
+        system::GUIRects, graphic::RectGraphic,
     },
     slotmap::slotmap::{SlotKey, Slotmap},
     wgpu,
     winit::window,
-    EngineDataType,
+    EngineDataType, render_system::RenderSystem,
 };
 
 use crate::{DataType, DataTypeKey};
@@ -92,6 +92,7 @@ pub struct WindowKey {
 pub struct GUISystem {
     pub active_window_collection: Vec<(WindowTypeKey, SlotKey)>,
     pub window_collection: HashMap<WindowTypeKey, WindowType>,
+    pub screen_size: UVec2,
 }
 
 fn update_window(
@@ -115,7 +116,7 @@ fn update_window(
 }
 
 impl GUISystem {
-    pub fn new() -> Self {
+    pub fn new(screen_size: UVec2) -> Self {
         let window_one_sm = GUISlotmaps::<DataTypeKey, DataType, WindowOne>::new_with_capacity(20);
         let window_two_sm = GUISlotmaps::<DataTypeKey, DataType, WindowTwo>::new_with_capacity(20);
 
@@ -136,6 +137,7 @@ impl GUISystem {
         Self {
             active_window_collection,
             window_collection,
+            screen_size
         }
     }
 
@@ -153,22 +155,59 @@ impl GUISystem {
         /* Nothing yet - The UIEvent to be sent to the GUI containers is going to be created here */
     }
 
+    pub fn resize(&mut self, new_size: UVec2){
+        self.screen_size = new_size;
+    }
+
     pub fn render(
         &mut self,
         gui_rects: &mut GUIRects,
         encoder: &mut rwge::wgpu::CommandEncoder,
         system_bind_group: &wgpu::BindGroup,
+        render_system: &RenderSystem,
         public_data: &mut PublicDataCollection<DataTypeKey, DataType>,
     ) {
-        {
-            let window_count = self.active_window_collection.len();
-            let event = UIEvent::Render(gui_rects);
-            for forward_index in 0..window_count {
-                let window_index = window_count - 1 - forward_index;
-                let (gui_type, slot_key) = self.active_window_collection[window_index];
-                update_window(&mut self.window_collection, gui_type, slot_key, &event, public_data);
+        gui_rects.rect_collection.clear_buffers();
+
+        {//This section updates the CPU buffers
+            {//Example rectangle
+                let texture_mask_val: u32 = 3;
+                let element_type: u32 = 0;
+
+                let dv13 = texture_mask_val << 8 + element_type;
+
+                let test_rect = RectGraphic{
+                    position_size: [10,10,10,10],
+                    data_vector_0: [0,0,0,1],
+                    data_vector_1: [0,0,0,dv13]
+                };
+                gui_rects.rect_collection.rect_graphic.cpu_vector.push(test_rect);
+
+                let test_rect = RectGraphic{
+                    position_size: [100,100,70,70],
+                    data_vector_0: [0,0,1,1],
+                    data_vector_1: [0,0,0,dv13]
+                };
+                gui_rects.rect_collection.rect_graphic.cpu_vector.push(test_rect);
+                
+                gui_rects.rect_collection.color.cpu_vector.push([0.5,0.5,0.5,1.0]);
+                gui_rects.rect_collection.rect_mask.cpu_vector.push([10.0,20.0,30.0,40.0]);
+                gui_rects.rect_collection.texture_position.cpu_vector.push([1,2,3,4]);
+                gui_rects.rect_collection.border_radius.cpu_vector.push([11.0,11.0,0.0,11.0]);
+            }
+    
+            {//Right now this should not do anything, as there are not going to be any active windows
+                let window_count = self.active_window_collection.len();
+                let event = UIEvent::Render(gui_rects);
+                for forward_index in 0..window_count {
+                    let window_index = window_count - 1 - forward_index;
+                    let (gui_type, slot_key) = self.active_window_collection[window_index];
+                    update_window(&mut self.window_collection, gui_type, slot_key, &event, public_data);
+                }
             }
         }
+
+        gui_rects.rect_collection.update_gpu_buffers(render_system);
 
         if let DataType::Base(EngineDataType::RenderTexture(render_texture_slotmap)) = public_data
             .collection
