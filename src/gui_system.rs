@@ -1,17 +1,22 @@
-use std::{collections::HashMap, mem::discriminant};
+use std::{
+    collections::HashMap,
+    mem::{discriminant, Discriminant},
+};
 
 use rwge::{
     entity_component::{EngineDataTypeKey, PublicDataCollection},
     glam::{uvec2, UVec2},
     gui::rect_ui::{
         event::UIEvent,
+        graphic::RectGraphic,
         slotmap::{GUIContainer, GUISlotmaps},
-        system::GUIRects, graphic::RectGraphic,
+        system::GUIRects,
     },
+    render_system::RenderSystem,
     slotmap::slotmap::{SlotKey, Slotmap},
     wgpu,
     winit::window,
-    EngineDataType, render_system::RenderSystem,
+    EngineDataType,
 };
 
 use crate::{DataType, DataTypeKey};
@@ -73,46 +78,20 @@ impl GUIContainer<DataTypeKey, DataType> for WindowTwo {
 }
 
 pub enum WindowType {
-    WindowOne(GUISlotmaps<DataTypeKey, DataType, WindowOne>),
-    WindowTwo(GUISlotmaps<DataTypeKey, DataType, WindowTwo>),
-}
-
-#[derive(Hash, PartialEq, Eq, Clone, Copy)]
-pub enum WindowTypeKey {
-    WindowOne,
-    WindowTwo,
+    WindowOne(Option<GUISlotmaps<DataTypeKey, DataType, WindowOne>>),
+    WindowTwo(Option<GUISlotmaps<DataTypeKey, DataType, WindowTwo>>),
 }
 
 pub struct WindowKey {
-    pub map_key: WindowTypeKey,
+    pub map_key: WindowType,
     pub key: SlotKey,
 }
 
 /// This version of the window system is only going to work with windowed spaces. This needs to be refactored in the future to support docking.
 pub struct GUISystem {
-    pub active_window_collection: Vec<(WindowTypeKey, SlotKey)>,
-    pub window_collection: HashMap<WindowTypeKey, WindowType>,
+    pub active_window_collection: Vec<WindowKey>,
+    pub window_collection: HashMap<Discriminant<WindowType>, WindowType>,
     pub screen_size: UVec2,
-}
-
-fn update_window(
-    window_collection: &mut HashMap<WindowTypeKey, WindowType>,
-    gui_type: WindowTypeKey,
-    slot_key: SlotKey,
-    event: &UIEvent,
-    public_data: &mut PublicDataCollection<DataTypeKey, DataType>,
-) {
-    let window_slotmap = window_collection.get_mut(&gui_type).unwrap();
-    match window_slotmap {
-        WindowType::WindowOne(slotmap) => slotmap
-            .get_value_mut(slot_key)
-            .expect("Window one could not be retrieved")
-            .update(&event, public_data),
-        WindowType::WindowTwo(slotmap) => slotmap
-            .get_value_mut(slot_key)
-            .expect("Window two could not be retrieved")
-            .update(&event, public_data),
-    }
 }
 
 impl GUISystem {
@@ -120,24 +99,49 @@ impl GUISystem {
         let window_one_sm = GUISlotmaps::<DataTypeKey, DataType, WindowOne>::new_with_capacity(20);
         let window_two_sm = GUISlotmaps::<DataTypeKey, DataType, WindowTwo>::new_with_capacity(20);
 
-        let mut window_collection: HashMap<WindowTypeKey, WindowType> =
-            HashMap::<WindowTypeKey, WindowType>::new();
-        window_collection.insert(
-            WindowTypeKey::WindowOne,
-            WindowType::WindowOne(window_one_sm),
-        );
-        window_collection.insert(
-            WindowTypeKey::WindowTwo,
-            WindowType::WindowTwo(window_two_sm),
-        );
+        let mut window_collection: HashMap<Discriminant<WindowType>, WindowType> =
+            HashMap::<Discriminant<WindowType>, WindowType>::new();
 
-        let active_window_collection: Vec<(WindowTypeKey, SlotKey)> =
-            Vec::<(WindowTypeKey, SlotKey)>::with_capacity(20);
+        let window_one_sm = WindowType::WindowOne(Some(window_one_sm));
+        window_collection.insert(discriminant(&WindowType::WindowOne(None)), window_one_sm);
+        let window_two_sm = WindowType::WindowTwo(Some(window_two_sm));
+        window_collection.insert(discriminant(&WindowType::WindowOne(None)), window_two_sm);
+
+        let active_window_collection: Vec<WindowKey> = Vec::<WindowKey>::with_capacity(20);
 
         Self {
             active_window_collection,
             window_collection,
-            screen_size
+            screen_size,
+        }
+    }
+
+    pub fn update_window(
+        window_collection: &mut HashMap<Discriminant<WindowType>, WindowType>,
+        key_data: &WindowKey,
+        event: &UIEvent,
+        public_data: &mut PublicDataCollection<DataTypeKey, DataType>,
+    ) {
+        let window_slotmap = window_collection
+            .get_mut(&discriminant(&key_data.map_key))
+            .unwrap();
+        match window_slotmap {
+            WindowType::WindowOne(slotmap) => {
+                slotmap
+                    .as_mut()
+                    .expect("Slotmap window one not found")
+                    .get_value_mut(key_data.key)
+                    .expect("Window one could not be retrieved")
+                    .update(&event, public_data);
+            }
+            WindowType::WindowTwo(slotmap) => {
+                slotmap
+                    .as_mut()
+                    .expect("Slotmap window one not found")
+                    .get_value_mut(key_data.key)
+                    .expect("Window two could not be retrieved")
+                    .update(&event, public_data);
+            }
         }
     }
 
@@ -146,8 +150,8 @@ impl GUISystem {
         event: &UIEvent,
         public_data: &mut PublicDataCollection<DataTypeKey, DataType>,
     ) {
-        for (gui_type, slot_key) in self.active_window_collection.iter() {
-            update_window(&mut self.window_collection, *gui_type, *slot_key, event, public_data);
+        for key in self.active_window_collection.iter() {
+            GUISystem::update_window(&mut self.window_collection, key, event, public_data);
         }
     }
 
@@ -155,7 +159,7 @@ impl GUISystem {
         /* Nothing yet - The UIEvent to be sent to the GUI containers is going to be created here */
     }
 
-    pub fn resize(&mut self, new_size: UVec2){
+    pub fn resize(&mut self, new_size: UVec2) {
         self.screen_size = new_size;
     }
 
@@ -169,40 +173,78 @@ impl GUISystem {
     ) {
         gui_rects.rect_collection.clear_buffers();
 
-        {//This section updates the CPU buffers
-            {//Example rectangle
+        {
+            //This section updates the CPU buffers
+            {
+                //Example rectangle
                 let texture_mask_val: u32 = 3;
                 let element_type: u32 = 0;
 
                 let dv13 = texture_mask_val << 8 + element_type;
 
-                let test_rect = RectGraphic{
-                    position_size: [10,10,10,10],
-                    data_vector_0: [0,0,0,1],
-                    data_vector_1: [0,0,0,dv13]
+                let test_rect = RectGraphic {
+                    position_size: [10, 10, 10, 10],
+                    data_vector_0: [0, 0, 0, 1],
+                    data_vector_1: [0, 0, 0, dv13],
                 };
-                gui_rects.rect_collection.rect_graphic.cpu_vector.push(test_rect);
+                gui_rects
+                    .rect_collection
+                    .rect_graphic
+                    .cpu_vector
+                    .push(test_rect);
 
-                let test_rect = RectGraphic{
-                    position_size: [100,100,70,70],
-                    data_vector_0: [0,0,1,1],
-                    data_vector_1: [0,0,0,dv13]
+                let test_rect = RectGraphic {
+                    position_size: [100, 100, 70, 70],
+                    data_vector_0: [0, 0, 1, 1],
+                    data_vector_1: [0, 0, 2, dv13],
                 };
-                gui_rects.rect_collection.rect_graphic.cpu_vector.push(test_rect);
-                
-                gui_rects.rect_collection.color.cpu_vector.push([0.5,0.5,0.5,1.0]);
-                gui_rects.rect_collection.rect_mask.cpu_vector.push([10.0,20.0,30.0,40.0]);
-                gui_rects.rect_collection.texture_position.cpu_vector.push([1,2,3,4]);
-                gui_rects.rect_collection.border_radius.cpu_vector.push([11.0,11.0,0.0,11.0]);
+                gui_rects
+                    .rect_collection
+                    .rect_graphic
+                    .cpu_vector
+                    .push(test_rect);
+
+                let test_rect = RectGraphic {
+                    position_size: [250, 100, 70, 70],
+                    data_vector_0: [0, 0, 1, 1],
+                    data_vector_1: [0, 0, 1, dv13],
+                };
+                gui_rects
+                    .rect_collection
+                    .rect_graphic
+                    .cpu_vector
+                    .push(test_rect);
+
+                gui_rects
+                    .rect_collection
+                    .color
+                    .cpu_vector
+                    .push([0.5, 0.5, 0.5, 1.0]);
+                gui_rects
+                    .rect_collection
+                    .rect_mask
+                    .cpu_vector
+                    .push([10.0, 20.0, 30.0, 40.0]);
+                gui_rects
+                    .rect_collection
+                    .texture_position
+                    .cpu_vector
+                    .push([1, 2, 3, 4]);
+                gui_rects
+                    .rect_collection
+                    .border_radius
+                    .cpu_vector
+                    .push([11.0, 11.0, 0.0, 11.0]);
             }
-    
-            {//Right now this should not do anything, as there are not going to be any active windows
+
+            {
+                //Right now this should not do anything, as there are not going to be any active windows
                 let window_count = self.active_window_collection.len();
                 let event = UIEvent::Render(gui_rects);
                 for forward_index in 0..window_count {
                     let window_index = window_count - 1 - forward_index;
-                    let (gui_type, slot_key) = self.active_window_collection[window_index];
-                    update_window(&mut self.window_collection, gui_type, slot_key, &event, public_data);
+                    let key = &self.active_window_collection[window_index];
+                    GUISystem::update_window(&mut self.window_collection, key, &event, public_data);
                 }
             }
         }

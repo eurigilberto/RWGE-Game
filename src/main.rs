@@ -135,16 +135,6 @@ impl Game {
             fonts_texture[pixel_index + 3] = noto_emoji_data_slice[index];
         }
 
-        /*let mut fonts_texture2 = vec![0 as u16; fonts_texture_size];
-
-        for index in 0..font_atlas.font_sdf_texture.len() {
-            let pixel_index = index * 4 as usize;
-            fonts_texture2[pixel_index    ] = 0 as u16;
-            fonts_texture2[pixel_index + 1] = data_slice[index];
-            fonts_texture2[pixel_index + 2] = 0 as u16;
-            fonts_texture2[pixel_index + 3] = 0 as u16;
-        }*/
-
         let tx_block_size = (rwge::wgpu::TextureFormat::Rgba16Float).describe().block_size;
         let bytes_per_row = tx_block_size as u32 * 1024;
 
@@ -164,29 +154,6 @@ impl Game {
         );
 
         println!("First copy done");
-
-        /*engine.render_system.render_window.queue.write_texture(
-            rwge::wgpu::ImageCopyTexture{
-                texture: &gui_rects.texture_atlas.texture,
-                mip_level: 0,
-                origin: rwge::wgpu::Origin3d { x: 0, y: 0, z: 1 },
-                aspect: rwge::wgpu::TextureAspect::All,
-            }
-            ,
-            rwge::bytemuck::cast_slice(fonts_texture2.as_slice()),
-            rwge::wgpu::ImageDataLayout {
-                offset: 0,
-                bytes_per_row: NonZeroU32::new(bytes_per_row),
-                rows_per_image: NonZeroU32::new(1024),
-            },
-            rwge::wgpu::Extent3d {
-                width: 1024,
-                height: 1024,
-                depth_or_array_layers: 1,
-            },
-        );
-
-        println!("Second copy done");*/
 
         if let Some(gui_copy_texture_surface) =
             create_gui_copy_texture_to_surface(&mut public_data, &gui_rects, engine)
@@ -312,3 +279,30 @@ fn main() {
 
     rwge::start_engine_loop(engine, game, event_loop);
 }
+
+
+// Example of writing into a different slice of the texture array
+/*
+engine.render_system.render_window.queue.write_texture(
+    rwge::wgpu::ImageCopyTexture{
+        texture: &gui_rects.texture_atlas.texture,
+        mip_level: 0,
+        origin: rwge::wgpu::Origin3d { x: 0, y: 0, z: 1 },
+        aspect: rwge::wgpu::TextureAspect::All,
+    }
+    ,
+    rwge::bytemuck::cast_slice(fonts_texture2.as_slice()),
+    rwge::wgpu::ImageDataLayout {
+        offset: 0,
+        bytes_per_row: NonZeroU32::new(bytes_per_row),
+        rows_per_image: NonZeroU32::new(1024),
+    },
+    rwge::wgpu::Extent3d {
+        width: 1024,
+        height: 1024,
+        depth_or_array_layers: 1,
+    },
+);
+
+println!("Second copy done");
+*/
