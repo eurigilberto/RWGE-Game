@@ -5,6 +5,7 @@ use std::{
 
 use rwge::{
     entity_component::{EngineDataTypeKey, PublicDataCollection},
+    font::font_atlas::FontAtlas,
     glam::{uvec2, UVec2},
     gui::rect_ui::{
         event::UIEvent,
@@ -163,6 +164,47 @@ impl GUISystem {
         self.screen_size = new_size;
     }
 
+    pub fn render_char(gui_rects: &mut GUIRects, font_atlas_collection: &Vec<FontAtlas>, glyph_char: char, position: UVec2) {
+        let e_char = font_atlas_collection[0]
+            .font_glyphs
+            .iter()
+            .find(|elem| elem.character == glyph_char)
+            .expect( format!("Glyph {} not found", glyph_char).as_str());
+
+        gui_rects
+            .rect_collection
+            .color
+            .cpu_vector
+            .push([0.5, 0.5, 0.2, 1.0]);
+
+        let char_size = e_char.get_padded_size();
+        let packed_char_size = (char_size.x & 0x0000ffff) << 16 | (char_size.y & 0x0000ffff);
+        
+        let tx_pos_index = gui_rects.rect_collection.texture_position.cpu_vector.len();
+        gui_rects.rect_collection.texture_position.cpu_vector.push([
+            e_char.tex_coord.x,
+            e_char.tex_coord.y,
+            packed_char_size,
+            0,
+        ]);
+
+        let texture_mask_val: u32 = 0;
+        let _type: u32 = 1;
+
+        let dv13 = texture_mask_val << 8 | _type;
+
+        let test_rect = RectGraphic {
+            position_size: [position.x, position.y, char_size.x, char_size.y],
+            data_vector_0: [0, tx_pos_index as u32 + 1, 0, 2],
+            data_vector_1: [0, 0, 0, dv13],
+        };
+        gui_rects
+            .rect_collection
+            .rect_graphic
+            .cpu_vector
+            .push(test_rect);
+    }
+
     pub fn render(
         &mut self,
         gui_rects: &mut GUIRects,
@@ -170,6 +212,7 @@ impl GUISystem {
         system_bind_group: &wgpu::BindGroup,
         render_system: &RenderSystem,
         public_data: &mut PublicDataCollection<DataTypeKey, DataType>,
+        font_atlas_collection: &Vec<FontAtlas>,
     ) {
         gui_rects.rect_collection.clear_buffers();
 
@@ -180,7 +223,7 @@ impl GUISystem {
                 let texture_mask_val: u32 = 3;
                 let element_type: u32 = 0;
 
-                let dv13 = texture_mask_val << 8 + element_type;
+                let dv13 = texture_mask_val << 8 | element_type;
 
                 let test_rect = RectGraphic {
                     position_size: [10, 10, 10, 10],
@@ -235,6 +278,12 @@ impl GUISystem {
                     .border_radius
                     .cpu_vector
                     .push([11.0, 11.0, 0.0, 11.0]);
+
+                // FONT RENDER TESTING
+                GUISystem::render_char(gui_rects, font_atlas_collection, 'E', uvec2(450, 100));
+                GUISystem::render_char(gui_rects, font_atlas_collection, 'U', uvec2(500, 100));
+                GUISystem::render_char(gui_rects, font_atlas_collection, 'R', uvec2(550, 100));
+                GUISystem::render_char(gui_rects, font_atlas_collection, 'I', uvec2(600, 100));
             }
 
             {

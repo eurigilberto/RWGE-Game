@@ -13,6 +13,7 @@ use rwge::{
     render_system::RenderSystem,
     slotmap::slotmap::{SlotKey, Slotmap},
     Engine, EngineDataType, RenderTextureSlotmap,
+    font::font_atlas::FontAtlas
 };
 
 pub struct Other {
@@ -50,6 +51,7 @@ struct Game {
     gui_copy_texture_surface: CopyTextureToSurface,
     gui_system: GUISystem,
     public_data: PublicDataCollection<DataTypeKey, DataType>,
+    font_atlas_collection: Vec<FontAtlas>
 }
 
 fn create_gui_copy_texture_to_surface(
@@ -73,6 +75,67 @@ fn create_gui_copy_texture_to_surface(
     }
 }
 
+fn write_font_to_gpu(engine: &Engine, gui_rects: &GUIRects) -> Vec<FontAtlas> {
+    let neo_san_med_data = include_bytes!("../res/fonts/Lato/Lato-Light.ttf");
+    let neo_san_light_data = include_bytes!("../res/fonts/Lato/Lato-Bold.ttf");
+
+    let neo_san_med_font_atlas = FontAtlas::new(
+        neo_san_med_data,
+        uvec2(1024, 1024),
+        48.0,
+        font::font_atlas::FontCharLimit::All,
+    )
+    .expect("Font Atlas could not be created");
+    let neo_san_light_font_atlas = FontAtlas::new(
+        neo_san_light_data,
+        uvec2(1024, 1024),
+        48.0,
+        font::font_atlas::FontCharLimit::All,
+    )
+    .expect("Font Atlas could not be created");
+    
+
+    let fonts_texture_size = neo_san_med_font_atlas.font_sdf_texture.len() * 4;
+    let atlas_lenght = neo_san_med_font_atlas.font_sdf_texture.len();
+
+    let neo_san_med_data_slice = half::slice::HalfFloatSliceExt::reinterpret_cast(
+        neo_san_med_font_atlas.font_sdf_texture.as_slice(),
+    );
+    let neo_san_light_data_slice = half::slice::HalfFloatSliceExt::reinterpret_cast(
+        neo_san_light_font_atlas.font_sdf_texture.as_slice(),
+    );
+
+    let mut fonts_texture = vec![0 as u16; fonts_texture_size];
+
+    for index in 0..atlas_lenght {
+        let pixel_index = index * 4 as usize;
+        fonts_texture[pixel_index] = neo_san_med_data_slice[index];
+        fonts_texture[pixel_index + 1] = neo_san_light_data_slice[index];
+    }
+
+    let tx_block_size = (rwge::wgpu::TextureFormat::Rgba16Float)
+        .describe()
+        .block_size;
+    let bytes_per_row = tx_block_size as u32 * 1024;
+
+    engine.render_system.render_window.queue.write_texture(
+        gui_rects.texture_atlas.texture.as_image_copy(),
+        rwge::bytemuck::cast_slice(fonts_texture.as_slice()),
+        rwge::wgpu::ImageDataLayout {
+            offset: 0,
+            bytes_per_row: NonZeroU32::new(bytes_per_row),
+            rows_per_image: NonZeroU32::new(1024),
+        },
+        rwge::wgpu::Extent3d {
+            width: 1024,
+            height: 1024,
+            depth_or_array_layers: 1,
+        },
+    );
+
+    vec![neo_san_med_font_atlas, neo_san_light_font_atlas]
+}
+
 impl Game {
     fn new(engine: &Engine) -> Self {
         let size = engine.render_system.render_window.size.clone();
@@ -93,67 +156,8 @@ impl Game {
             EngineDataTypeKey::RenderTexture.into(),
             EngineDataType::RenderTexture(render_texture_slotmap).into(),
         );
-
-        let neo_san_med_data = include_bytes!("../res/fonts/NeoSansStd-Medium.otf");
-        let neo_san_light_data = include_bytes!("../res/fonts/NeoSansStd-Light.otf");
-        let neo_san_med_italic_data = include_bytes!("../res/fonts/NeoSansStd-MediumItalic.otf");
-        let noto_emoji_data = include_bytes!("../res/fonts/NotoEmoji-Medium.ttf");
-        //NeoSansStd-MediumItalic
-
-        let neo_san_med_font_atlas = font::font_atlas::FontAtlas::new(neo_san_med_data, uvec2(1024, 1024), 48.0, font::font_atlas::FontCharLimit::All)
-            .expect("Font Atlas could not be created");
-        let neo_san_light_font_atlas = font::font_atlas::FontAtlas::new(neo_san_light_data, uvec2(1024, 1024), 48.0, font::font_atlas::FontCharLimit::All)
-            .expect("Font Atlas could not be created");
-        let neo_san_med_italic_font_atlas = font::font_atlas::FontAtlas::new(neo_san_med_italic_data, uvec2(1024, 1024), 48.0, font::font_atlas::FontCharLimit::All)
-            .expect("Font Atlas could not be created");
-        let noto_emoji_font_atlas = font::font_atlas::FontAtlas::new(noto_emoji_data, uvec2(1024, 1024), 48.0, font::font_atlas::FontCharLimit::LimitedCount(100))
-            .expect("Font Atlas could not be created");
-
-        let fonts_texture_size = neo_san_med_font_atlas.font_sdf_texture.len() * 4;
-        let atlas_lenght = neo_san_med_font_atlas.font_sdf_texture.len();
-
-        let neo_san_med_data_slice = half::slice::HalfFloatSliceExt::reinterpret_cast(
-            neo_san_med_font_atlas.font_sdf_texture.as_slice(),
-        );
-        let neo_san_light_data_slice = half::slice::HalfFloatSliceExt::reinterpret_cast(
-            neo_san_light_font_atlas.font_sdf_texture.as_slice(),
-        );
-        let neo_san_med_italic_data_slice = half::slice::HalfFloatSliceExt::reinterpret_cast(
-            neo_san_med_italic_font_atlas.font_sdf_texture.as_slice(),
-        );
-        let noto_emoji_data_slice = half::slice::HalfFloatSliceExt::reinterpret_cast(
-            noto_emoji_font_atlas.font_sdf_texture.as_slice(),
-        );
         
-        let mut fonts_texture = vec![0 as u16; fonts_texture_size];
-
-        for index in 0..atlas_lenght {
-            let pixel_index = index * 4 as usize;
-            fonts_texture[pixel_index    ] = neo_san_med_data_slice[index];
-            fonts_texture[pixel_index + 1] = neo_san_light_data_slice[index];
-            fonts_texture[pixel_index + 2] = neo_san_med_italic_data_slice[index];
-            fonts_texture[pixel_index + 3] = noto_emoji_data_slice[index];
-        }
-
-        let tx_block_size = (rwge::wgpu::TextureFormat::Rgba16Float).describe().block_size;
-        let bytes_per_row = tx_block_size as u32 * 1024;
-
-        engine.render_system.render_window.queue.write_texture(
-            gui_rects.texture_atlas.texture.as_image_copy(),
-            rwge::bytemuck::cast_slice(fonts_texture.as_slice()),
-            rwge::wgpu::ImageDataLayout {
-                offset: 0,
-                bytes_per_row: NonZeroU32::new(bytes_per_row),
-                rows_per_image: NonZeroU32::new(1024),
-            },
-            rwge::wgpu::Extent3d {
-                width: 1024,
-                height: 1024,
-                depth_or_array_layers: 1,
-            },
-        );
-
-        println!("First copy done");
+        let font_atlas_collection = write_font_to_gpu(engine, &gui_rects);
 
         if let Some(gui_copy_texture_surface) =
             create_gui_copy_texture_to_surface(&mut public_data, &gui_rects, engine)
@@ -163,6 +167,7 @@ impl Game {
                 gui_system,
                 public_data,
                 gui_copy_texture_surface,
+                font_atlas_collection
             }
         } else {
             panic!("Render texture slotmap not found")
@@ -255,6 +260,7 @@ impl rwge::Runtime for Game {
             &engine.system_bind_group,
             &engine.render_system,
             &mut self.public_data,
+            &self.font_atlas_collection
         );
 
         self.gui_copy_texture_surface.render(encoder, screen_view);
@@ -279,30 +285,3 @@ fn main() {
 
     rwge::start_engine_loop(engine, game, event_loop);
 }
-
-
-// Example of writing into a different slice of the texture array
-/*
-engine.render_system.render_window.queue.write_texture(
-    rwge::wgpu::ImageCopyTexture{
-        texture: &gui_rects.texture_atlas.texture,
-        mip_level: 0,
-        origin: rwge::wgpu::Origin3d { x: 0, y: 0, z: 1 },
-        aspect: rwge::wgpu::TextureAspect::All,
-    }
-    ,
-    rwge::bytemuck::cast_slice(fonts_texture2.as_slice()),
-    rwge::wgpu::ImageDataLayout {
-        offset: 0,
-        bytes_per_row: NonZeroU32::new(bytes_per_row),
-        rows_per_image: NonZeroU32::new(1024),
-    },
-    rwge::wgpu::Extent3d {
-        width: 1024,
-        height: 1024,
-        depth_or_array_layers: 1,
-    },
-);
-
-println!("Second copy done");
-*/

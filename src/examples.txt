@@ -1,0 +1,25 @@
+// Example of writing into a different slice of the texture array
+/*
+engine.render_system.render_window.queue.write_texture(
+    rwge::wgpu::ImageCopyTexture{
+        texture: &gui_rects.texture_atlas.texture,
+        mip_level: 0,
+        origin: rwge::wgpu::Origin3d { x: 0, y: 0, z: 1 },
+        aspect: rwge::wgpu::TextureAspect::All,
+    }
+    ,
+    rwge::bytemuck::cast_slice(fonts_texture2.as_slice()),
+    rwge::wgpu::ImageDataLayout {
+        offset: 0,
+        bytes_per_row: NonZeroU32::new(bytes_per_row),
+        rows_per_image: NonZeroU32::new(1024),
+    },
+    rwge::wgpu::Extent3d {
+        width: 1024,
+        height: 1024,
+        depth_or_array_layers: 1,
+    },
+);
+
+println!("Second copy done");
+*/
