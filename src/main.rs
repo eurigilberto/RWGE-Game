@@ -76,41 +76,53 @@ fn create_gui_copy_texture_to_surface(
 }
 
 fn write_font_to_gpu(engine: &Engine, gui_rects: &GUIRects) -> Vec<FontAtlas> {
-    let neo_san_med_data = include_bytes!("../res/fonts/Lato/Lato-Light.ttf");
-    let neo_san_light_data = include_bytes!("../res/fonts/Lato/Lato-Bold.ttf");
+    let font_data_1 = include_bytes!("../res/fonts/NeoSans/NeoSansStd-MediumItalic.otf");
+    let font_data_2 = include_bytes!("../res/fonts/Lato/Lato-Bold.ttf");
+    let font_data_3 = include_bytes!("../res/fonts/Lobster-Regular.ttf");
 
-    let neo_san_med_font_atlas = FontAtlas::new(
-        neo_san_med_data,
+    let font_atlas_1 = FontAtlas::new(
+        font_data_1,
         uvec2(1024, 1024),
         48.0,
         font::font_atlas::FontCharLimit::All,
     )
     .expect("Font Atlas could not be created");
-    let neo_san_light_font_atlas = FontAtlas::new(
-        neo_san_light_data,
+    let font_atlas_2 = FontAtlas::new(
+        font_data_2,
         uvec2(1024, 1024),
         48.0,
+        font::font_atlas::FontCharLimit::All,
+    )
+    .expect("Font Atlas could not be created");
+    let font_atlas_3 = FontAtlas::new(
+        font_data_3,
+        uvec2(1024, 1024),
+        22.0,
         font::font_atlas::FontCharLimit::All,
     )
     .expect("Font Atlas could not be created");
     
 
-    let fonts_texture_size = neo_san_med_font_atlas.font_sdf_texture.len() * 4;
-    let atlas_lenght = neo_san_med_font_atlas.font_sdf_texture.len();
+    let fonts_texture_size = font_atlas_1.font_sdf_texture.len() * 4;
+    let atlas_lenght = font_atlas_1.font_sdf_texture.len();
 
-    let neo_san_med_data_slice = half::slice::HalfFloatSliceExt::reinterpret_cast(
-        neo_san_med_font_atlas.font_sdf_texture.as_slice(),
+    let font_data_slice_1 = half::slice::HalfFloatSliceExt::reinterpret_cast(
+        font_atlas_1.font_sdf_texture.as_slice(),
     );
-    let neo_san_light_data_slice = half::slice::HalfFloatSliceExt::reinterpret_cast(
-        neo_san_light_font_atlas.font_sdf_texture.as_slice(),
+    let font_data_slice_2 = half::slice::HalfFloatSliceExt::reinterpret_cast(
+        font_atlas_2.font_sdf_texture.as_slice(),
+    );
+    let font_data_slice_3 = half::slice::HalfFloatSliceExt::reinterpret_cast(
+        font_atlas_3.font_sdf_texture.as_slice(),
     );
 
     let mut fonts_texture = vec![0 as u16; fonts_texture_size];
 
     for index in 0..atlas_lenght {
         let pixel_index = index * 4 as usize;
-        fonts_texture[pixel_index] = neo_san_med_data_slice[index];
-        fonts_texture[pixel_index + 1] = neo_san_light_data_slice[index];
+        fonts_texture[pixel_index] = font_data_slice_1[index];
+        fonts_texture[pixel_index + 1] = font_data_slice_2[index];
+        fonts_texture[pixel_index + 2] = font_data_slice_3[index];
     }
 
     let tx_block_size = (rwge::wgpu::TextureFormat::Rgba16Float)
@@ -133,7 +145,7 @@ fn write_font_to_gpu(engine: &Engine, gui_rects: &GUIRects) -> Vec<FontAtlas> {
         },
     );
 
-    vec![neo_san_med_font_atlas, neo_san_light_font_atlas]
+    vec![font_atlas_1, font_atlas_2, font_atlas_3]
 }
 
 impl Game {

@@ -164,8 +164,8 @@ impl GUISystem {
         self.screen_size = new_size;
     }
 
-    pub fn render_char(gui_rects: &mut GUIRects, font_atlas_collection: &Vec<FontAtlas>, glyph_char: char, position: UVec2) {
-        let e_char = font_atlas_collection[0]
+    pub fn render_char(gui_rects: &mut GUIRects, font_atlas_collection: &Vec<FontAtlas>, collection_index: usize, component_index: u32, glyph_char: char, position: UVec2) {
+        let e_char = font_atlas_collection[collection_index]
             .font_glyphs
             .iter()
             .find(|elem| elem.character == glyph_char)
@@ -180,12 +180,15 @@ impl GUISystem {
         let char_size = e_char.get_padded_size();
         let packed_char_size = (char_size.x & 0x0000ffff) << 16 | (char_size.y & 0x0000ffff);
         
+        //There needs to be a place in the font atlas where it specifies the texture slice
+        let packed_texture_selection = (0) << 4 | component_index;
+
         let tx_pos_index = gui_rects.rect_collection.texture_position.cpu_vector.len();
         gui_rects.rect_collection.texture_position.cpu_vector.push([
             e_char.tex_coord.x,
             e_char.tex_coord.y,
             packed_char_size,
-            0,
+            packed_texture_selection,
         ]);
 
         let texture_mask_val: u32 = 0;
@@ -194,7 +197,7 @@ impl GUISystem {
         let dv13 = texture_mask_val << 8 | _type;
 
         let test_rect = RectGraphic {
-            position_size: [position.x, position.y, char_size.x, char_size.y],
+            position_size: [position.x, position.y, ((char_size.x as f32) * 2.0) as u32, ((char_size.y as f32) * 2.0) as u32],
             data_vector_0: [0, tx_pos_index as u32 + 1, 0, 2],
             data_vector_1: [0, 0, 0, dv13],
         };
@@ -280,10 +283,20 @@ impl GUISystem {
                     .push([11.0, 11.0, 0.0, 11.0]);
 
                 // FONT RENDER TESTING
-                GUISystem::render_char(gui_rects, font_atlas_collection, 'E', uvec2(450, 100));
-                GUISystem::render_char(gui_rects, font_atlas_collection, 'U', uvec2(500, 100));
-                GUISystem::render_char(gui_rects, font_atlas_collection, 'R', uvec2(550, 100));
-                GUISystem::render_char(gui_rects, font_atlas_collection, 'I', uvec2(600, 100));
+                GUISystem::render_char(gui_rects, font_atlas_collection, 0, 0, 'E', uvec2(450, 100));
+                GUISystem::render_char(gui_rects, font_atlas_collection, 0, 0, 'U', uvec2(510, 100));
+                GUISystem::render_char(gui_rects, font_atlas_collection, 0, 0, 'R', uvec2(570, 100));
+                GUISystem::render_char(gui_rects, font_atlas_collection, 0, 0, 'I', uvec2(620, 100));
+
+                GUISystem::render_char(gui_rects, font_atlas_collection, 1, 1, 'E', uvec2(450, 200));
+                GUISystem::render_char(gui_rects, font_atlas_collection, 1, 1, 'U', uvec2(510, 200));
+                GUISystem::render_char(gui_rects, font_atlas_collection, 1, 1, 'R', uvec2(570, 200));
+                GUISystem::render_char(gui_rects, font_atlas_collection, 1, 1, 'I', uvec2(620, 200));
+
+                GUISystem::render_char(gui_rects, font_atlas_collection, 2, 2, 'E', uvec2(450, 300));
+                GUISystem::render_char(gui_rects, font_atlas_collection, 2, 2, 'U', uvec2(490, 300));
+                GUISystem::render_char(gui_rects, font_atlas_collection, 2, 2, 'R', uvec2(530, 300));
+                GUISystem::render_char(gui_rects, font_atlas_collection, 2, 2, 'I', uvec2(560, 300));
             }
 
             {
