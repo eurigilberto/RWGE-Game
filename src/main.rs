@@ -267,6 +267,7 @@ impl rwge::Runtime for Game {
         );
 
         self.gui_system.render(
+            &engine.time,
             &mut self.gui_rects,
             encoder,
             &engine.system_bind_group,

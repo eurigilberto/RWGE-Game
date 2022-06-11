@@ -17,7 +17,7 @@ use rwge::{
     slotmap::slotmap::{SlotKey, Slotmap},
     wgpu,
     winit::window,
-    EngineDataType,
+    EngineDataType, engine,
 };
 
 use crate::{DataType, DataTypeKey};
@@ -210,6 +210,7 @@ impl GUISystem {
 
     pub fn render(
         &mut self,
+        system_time: &rwge::engine_time::EngineTime,
         gui_rects: &mut GUIRects,
         encoder: &mut rwge::wgpu::CommandEncoder,
         system_bind_group: &wgpu::BindGroup,
@@ -228,6 +229,8 @@ impl GUISystem {
 
                 let dv13 = texture_mask_val << 8 | element_type;
 
+                let rotation = (system_time.time_data.time * 8190.0) as u32;
+
                 let test_rect = RectGraphic {
                     position_size: [10, 10, 10, 10],
                     data_vector_0: [0, 0, 0, 1],
@@ -242,7 +245,7 @@ impl GUISystem {
                 let test_rect = RectGraphic {
                     position_size: [100, 100, 70, 70],
                     data_vector_0: [0, 0, 1, 1],
-                    data_vector_1: [0, 0, 2, dv13],
+                    data_vector_1: [0, rotation, 2, dv13],
                 };
                 gui_rects
                     .rect_collection
@@ -253,7 +256,7 @@ impl GUISystem {
                 let test_rect = RectGraphic {
                     position_size: [250, 100, 70, 70],
                     data_vector_0: [0, 0, 1, 1],
-                    data_vector_1: [0, 0, 1, dv13],
+                    data_vector_1: [0, rotation * 4, 1, dv13],
                 };
                 gui_rects
                     .rect_collection
