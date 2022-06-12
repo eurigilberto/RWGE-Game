@@ -65,7 +65,7 @@ fn create_gui_copy_texture_to_surface(
         .expect("No Render Texture collection was found")
     {
         let color_rt = render_texture_slotmap
-            .get_value(gui_rects.render_texture.color_texture_key.key)
+            .get_value(&gui_rects.render_texture.color_texture_key.key)
             .expect("Color Render Texture not found");
         let gui_copy_texture_surface =
             CopyTextureToSurface::new(&engine.render_system, &color_rt.texture_view);
@@ -229,7 +229,7 @@ impl rwge::Runtime for Game {
                         .get(&DataTypeKey::Base(EngineDataTypeKey::RenderTexture))
                     {
                         if let Some(color_rt) = render_texture_slotmap
-                            .get_value(self.gui_rects.render_texture.color_texture_key.key)
+                            .get_value(&self.gui_rects.render_texture.color_texture_key.key)
                         {
                             self.gui_copy_texture_surface
                                 .update_texture_view(&color_rt.texture_view, &engine.render_system);
@@ -238,9 +238,9 @@ impl rwge::Runtime for Game {
 
                     engine.render_system.render_window.resize(new_size);
                 } else {
-                    let gui_event = rwge::gui::rect_ui::event::default_event_transformation(event);
-                    if let Some(e) = gui_event {
-                        self.gui_system.handle_event(&e, &mut self.public_data);
+                    let gui_event = rwge::gui::rect_ui::event::default_event_transformation(event, engine.render_system.render_window.size);
+                    if let Some(mut e) = gui_event {
+                        self.gui_system.handle_event(&mut e, &mut self.public_data, &engine);
                     }
                 }
             }
@@ -267,13 +267,11 @@ impl rwge::Runtime for Game {
         );
 
         self.gui_system.render(
-            &engine.time,
+            engine,
             &mut self.gui_rects,
             encoder,
-            &engine.system_bind_group,
-            &engine.render_system,
             &mut self.public_data,
-            &self.font_atlas_collection
+            &self.font_atlas_collection,
         );
 
         self.gui_copy_texture_surface.render(encoder, screen_view);
