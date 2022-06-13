@@ -7,11 +7,18 @@ mod test;
 use test::test_screen;
 
 use rwge::{
+    color::RGBA,
     engine,
     entity_component::{EngineDataTypeKey, PublicDataCollection},
     font::font_atlas::FontAtlas,
     glam::{uvec2, UVec2},
-    gui::rect_ui::{event::UIEvent, graphic::RectGraphic, slotmap::GUIContainer, system::GUIRects},
+    gui::rect_ui::{
+        element::{create_new_rect_element, ColoringType, MaskType},
+        event::UIEvent,
+        graphic::RectGraphic,
+        slotmap::GUIContainer,
+        system::{BorderRadius, ExtraBufferData, GUIRects, RectMask},
+    },
     render_system::RenderSystem,
     slotmap::slotmap::{SlotKey, Slotmap},
     wgpu,
@@ -64,7 +71,7 @@ impl GUIContainer<PublicDataCollection<DataTypeKey, DataType>> for WindowOne {
                         container_size.y,
                     ],
                     data_vector_0: [0, 0, 0, color_index as u32],
-                    data_vector_1: [0, 0, 0, dv13],
+                    data_vector_1: [0.0, 0.0, 0.0, dv13 as f32],
                 };
                 gui_rects
                     .rect_collection
@@ -94,20 +101,18 @@ pub struct WindowContainer {
 impl WindowContainer {
     fn handle_event(&mut self, event: &mut UIEvent, engine: &Engine) {
         match event {
-            UIEvent::MouseButton(button) => {},
+            UIEvent::MouseButton(button) => {}
             UIEvent::MouseMove(position) => {
-				self.position = position.data.as_uvec2();
-			},
-            UIEvent::MouseWheel(_) => {},
-            UIEvent::KeyboardInput(_) => {},
-            UIEvent::Update => {},
+                self.position = position.data.as_uvec2();
+            }
+            UIEvent::MouseWheel(_) => {}
+            UIEvent::KeyboardInput(_) => {}
+            UIEvent::Update => {}
             UIEvent::Render {
                 gui_rects,
                 container_size,
                 container_position,
-            } => {
-				
-			},
+            } => {}
         }
     }
 }
@@ -186,7 +191,7 @@ impl GUISystem {
         gui_rects.rect_collection.clear_buffers();
 
         {
-            let window_count = self.active_window_collection.len();
+            /*let window_count = self.active_window_collection.len();
             for forward_index in 0..window_count {
                 let window_index = window_count - 1 - forward_index;
                 let window_container = &mut self.active_window_collection[window_index];
@@ -200,8 +205,9 @@ impl GUISystem {
                     .get_value_mut(&window_container.slot_key)
                     .expect("Window not found")
                     .handle_event(&mut event, public_data, engine);
-            }
-            test_screen(&engine.time, gui_rects, font_atlas_collection);
+            }*/
+            
+            test_screen(&engine.time, gui_rects, font_atlas_collection, self.screen_size);
         }
 
         gui_rects

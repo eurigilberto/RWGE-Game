@@ -1,285 +1,567 @@
-use rwge::{gui::rect_ui::{system::GUIRects, graphic::RectGraphic}, wgpu, render_system::RenderSystem, entity_component::PublicDataCollection, font::font_atlas::FontAtlas, glam::{UVec2, uvec2}};
+use rwge::{
+    color::RGBA,
+    entity_component::PublicDataCollection,
+    font::font_atlas::FontAtlas,
+    glam::{uvec2, UVec2, vec2},
+    gui::rect_ui::{
+        element::{create_new_rect_element, ColoringType, MaskType, RadialGradient, TextureSlice, LinearGradient},
+        graphic::RectGraphic,
+        system::{BorderRadius, ExtraBufferData, GUIRects, RectMask},
+    },
+    render_system::RenderSystem,
+    wgpu,
+};
 
-use crate::{DataTypeKey, DataType};
+use crate::{DataType, DataTypeKey};
 
 pub fn render_char(
-	gui_rects: &mut GUIRects,
-	font_atlas_collection: &Vec<FontAtlas>,
-	collection_index: usize,
-	component_index: u32,
-	glyph_char: char,
-	position: UVec2,
-	rotation: u32,
+    gui_rects: &mut GUIRects,
+    font_atlas_collection: &Vec<FontAtlas>,
+    collection_index: usize,
+    component_index: u32,
+    glyph_char: char,
+    position: UVec2,
+    rotation: u32,
 ) {
-	let e_char = font_atlas_collection[collection_index]
-		.font_glyphs
-		.iter()
-		.find(|elem| elem.character == glyph_char)
-		.expect(format!("Glyph {} not found", glyph_char).as_str());
-
-	gui_rects
-		.rect_collection
-		.color
-		.cpu_vector
-		.push([0.5, 0.5, 0.2, 1.0]);
-
-	let char_size = e_char.get_padded_size();
-	let packed_char_size = (char_size.x & 0x0000ffff) << 16 | (char_size.y & 0x0000ffff);
-
-	//There needs to be a place in the font atlas where it specifies the texture slice
-	let packed_texture_selection = (0) << 4 | component_index;
-
-	let tx_pos_index = gui_rects.rect_collection.texture_position.cpu_vector.len();
-	gui_rects.rect_collection.texture_position.cpu_vector.push([
-		e_char.tex_coord.x,
-		e_char.tex_coord.y,
-		packed_char_size,
-		packed_texture_selection,
-	]);
-
-	let texture_mask_val: u32 = 0;
-	let _type: u32 = 1;
-
-	let dv13 = texture_mask_val << 8 | _type;
-
-	let test_rect = RectGraphic {
-		position_size: [
-			position.x,
-			position.y,
-			((char_size.x as f32) * 2.0) as u32,
-			((char_size.y as f32) * 2.0) as u32,
-		],
-		data_vector_0: [0, tx_pos_index as u32 + 1, 0, 2],
-		data_vector_1: [0, rotation, 0, dv13],
-	};
-	gui_rects
-		.rect_collection
-		.rect_graphic
-		.cpu_vector
-		.push(test_rect);
-}
-
-pub fn test_screen(system_time: &rwge::engine_time::EngineTime,
-	gui_rects: &mut GUIRects,
-	font_atlas_collection: &Vec<FontAtlas>) {
-    let texture_mask_val: u32 = 3;
-    let element_type: u32 = 0;
-
-    let dv13 = texture_mask_val << 8 | element_type;
-
-    let rotation = (system_time.time_data.time * 8190.0) as u32;
-
-    let test_rect = RectGraphic {
-        position_size: [10, 10, 10, 10],
-        data_vector_0: [0, 0, 0, 1],
-        data_vector_1: [0, 0, 0, dv13],
-    };
-    gui_rects
-        .rect_collection
-        .rect_graphic
-        .cpu_vector
-        .push(test_rect);
-
-    let test_rect = RectGraphic {
-        position_size: [100, 100, 70, 70],
-        data_vector_0: [0, 0, 1, 1],
-        data_vector_1: [0, rotation, 2, dv13],
-    };
-    gui_rects
-        .rect_collection
-        .rect_graphic
-        .cpu_vector
-        .push(test_rect);
-
-    let c_dv13 = texture_mask_val << 8 | 2;
-    let test_rect = RectGraphic {
-        position_size: [100, 300, 70, 70],
-        data_vector_0: [0, 0, 1, 1],
-        data_vector_1: [0, 0, 2, c_dv13],
-    };
-    gui_rects
-        .rect_collection
-        .rect_graphic
-        .cpu_vector
-        .push(test_rect);
-
-    let test_rect = RectGraphic {
-        position_size: [200, 300, 100, 70],
-        data_vector_0: [0, 0, 1, 1],
-        data_vector_1: [0, 0, 2, c_dv13],
-    };
-    gui_rects
-        .rect_collection
-        .rect_graphic
-        .cpu_vector
-        .push(test_rect);
-
-    let size_interp = f32::sin(system_time.time_data.time) * 0.5 + 0.5;
-    let rect_width = (140.0 - 70.0) * size_interp + 70.0;
-    let rect_height = (70.0 - 140.0) * size_interp + 140.0;
-    let test_rect = RectGraphic {
-        position_size: [200, 500, rect_width as u32, rect_height as u32],
-        data_vector_0: [0, 0, 1, 1],
-        data_vector_1: [0, 0, 2, c_dv13],
-    };
-    gui_rects
-        .rect_collection
-        .rect_graphic
-        .cpu_vector
-        .push(test_rect);
-
-    let test_rect = RectGraphic {
-        position_size: [400, 500, rect_width as u32, rect_height as u32],
-        data_vector_0: [0, 0, 1, 1],
-        data_vector_1: [0, rotation * 4, 2, c_dv13],
-    };
-    gui_rects
-        .rect_collection
-        .rect_graphic
-        .cpu_vector
-        .push(test_rect);
-
-    let test_rect = RectGraphic {
-        position_size: [250, 100, 70, 70],
-        data_vector_0: [0, 0, 1, 1],
-        data_vector_1: [0, rotation * 4, 1, dv13],
-    };
-    gui_rects
-        .rect_collection
-        .rect_graphic
-        .cpu_vector
-        .push(test_rect);
+    /*let e_char = font_atlas_collection[collection_index]
+        .font_glyphs
+        .iter()
+        .find(|elem| elem.character == glyph_char)
+        .expect(format!("Glyph {} not found", glyph_char).as_str());
 
     gui_rects
         .rect_collection
         .color
         .cpu_vector
-        .push([0.5, 0.5, 0.5, 1.0]);
+        .push([0.5, 0.5, 0.2, 1.0]);
+
+    let char_size = e_char.get_padded_size();
+    let packed_char_size = (char_size.x & 0x0000ffff) << 16 | (char_size.y & 0x0000ffff);
+
+    //There needs to be a place in the font atlas where it specifies the texture slice
+    let packed_texture_selection = (0) << 4 | component_index;
+
+    let tx_pos_index = gui_rects.rect_collection.texture_position.cpu_vector.len();
+    gui_rects.rect_collection.texture_position.cpu_vector.push([
+        e_char.tex_coord.x,
+        e_char.tex_coord.y,
+        packed_char_size,
+        packed_texture_selection,
+    ]);
+
+    let texture_mask_val: u32 = 0;
+    let _type: u32 = 1;
+
+    let dv13 = texture_mask_val << 8 | _type;
+
+    let test_rect = RectGraphic {
+        position_size: [
+            position.x,
+            position.y,
+            ((char_size.x as f32) * 2.0) as u32,
+            ((char_size.y as f32) * 2.0) as u32,
+        ],
+        data_vector_0: [0, tx_pos_index as u32 + 1, 0, 2],
+        data_vector_1: [0, rotation, 0, dv13],
+    };
     gui_rects
         .rect_collection
-        .rect_mask
+        .rect_graphic
         .cpu_vector
-        .push([10.0, 20.0, 30.0, 40.0]);
-    gui_rects
-        .rect_collection
-        .texture_position
-        .cpu_vector
-        .push([1, 2, 3, 4]);
-    gui_rects
-        .rect_collection
-        .border_radius
-        .cpu_vector
-        .push([11.0, 11.0, 0.0, 11.0]);
+        .push(test_rect);*/
+}
 
-    // FONT RENDER TESTING
-    render_char(
+pub fn test_screen(
+    system_time: &rwge::engine_time::EngineTime,
+    gui_rects: &mut GUIRects,
+    font_atlas_collection: &Vec<FontAtlas>,
+    screen_size: UVec2,
+) {
+    let mask = MaskType::Rect { border: None };
+    let color = ColoringType::Color(ExtraBufferData::NewData(RGBA::GREEN));
+    create_new_rect_element(
         gui_rects,
-        font_atlas_collection,
-        0,
-        0,
-        'E',
-        uvec2(450, 100),
-        0,
-    );
-    render_char(
-        gui_rects,
-        font_atlas_collection,
-        0,
-        0,
-        'U',
-        uvec2(510, 100),
-        rotation,
-    );
-    render_char(
-        gui_rects,
-        font_atlas_collection,
-        0,
-        0,
-        'R',
-        uvec2(570, 100),
-        0,
-    );
-    render_char(
-        gui_rects,
-        font_atlas_collection,
-        0,
-        0,
-        'I',
-        uvec2(620, 100),
-        0,
+        screen_size,
+        uvec2(10, 10),
+        uvec2(10, 10),
+        0.0,
+        ExtraBufferData::NewData(RectMask {
+            position: (screen_size.as_vec2() * 0.5).as_uvec2(),
+            size: screen_size,
+        }),
+        &mask,
+        &color,
     );
 
-    render_char(
+    let mask = MaskType::Rect { border: None };
+    let color = ColoringType::Color(ExtraBufferData::NewData(RGBA::RED));
+    create_new_rect_element(
         gui_rects,
-        font_atlas_collection,
-        1,
-        1,
-        'E',
-        uvec2(450, 200),
-        rotation,
-    );
-    render_char(
-        gui_rects,
-        font_atlas_collection,
-        1,
-        1,
-        'U',
-        uvec2(510, 200),
-        rotation,
-    );
-    render_char(
-        gui_rects,
-        font_atlas_collection,
-        1,
-        1,
-        'R',
-        uvec2(570, 200),
-        0,
-    );
-    render_char(
-        gui_rects,
-        font_atlas_collection,
-        1,
-        1,
-        'I',
-        uvec2(620, 200),
-        0,
+        screen_size,
+        uvec2(100, 100),
+        uvec2(50, 50),
+        0.0,
+        ExtraBufferData::NewData(RectMask {
+            position: (screen_size.as_vec2() * 0.5).as_uvec2(),
+            size: screen_size,
+        }),
+        &mask,
+        &color,
     );
 
-    render_char(
+    let mask = MaskType::RoundRect {
+        border_radius: ExtraBufferData::NewData(BorderRadius {
+            top_right: 5.0,
+            bottom_right: 10.0,
+            top_left: 15.0,
+            bottom_left: 20.0,
+        }),
+        border: None,
+    };
+    let color = ColoringType::Color(ExtraBufferData::NewData(RGBA::BLUE));
+    create_new_rect_element(
         gui_rects,
-        font_atlas_collection,
-        2,
-        2,
-        'E',
-        uvec2(450, 300),
-        0,
+        screen_size,
+        uvec2(100, 200),
+        uvec2(50, 50),
+        0.0,
+        ExtraBufferData::NewData(RectMask {
+            position: (screen_size.as_vec2() * 0.5).as_uvec2(),
+            size: screen_size,
+        }),
+        &mask,
+        &color,
     );
-    render_char(
+
+    let mask = MaskType::RoundRect {
+        border_radius: ExtraBufferData::NewData(BorderRadius {
+            top_right: 5.0,
+            bottom_right: 10.0,
+            top_left: 15.0,
+            bottom_left: 20.0,
+        }),
+        border: None,
+    };
+    let color = ColoringType::Color(ExtraBufferData::NewData(RGBA::BLUE));
+    create_new_rect_element(
         gui_rects,
-        font_atlas_collection,
-        2,
-        2,
-        'U',
-        uvec2(490, 300),
-        rotation,
+        screen_size,
+        uvec2(100, 300),
+        uvec2(70, 70),
+        system_time.time_data.time,
+        ExtraBufferData::NewData(RectMask {
+            position: (screen_size.as_vec2() * 0.5).as_uvec2(),
+            size: screen_size,
+        }),
+        &mask,
+        &color,
     );
-    render_char(
+
+    let mask = MaskType::Circle { border: None };
+    let color = ColoringType::Color(ExtraBufferData::NewData(RGBA::GREY));
+    create_new_rect_element(
         gui_rects,
-        font_atlas_collection,
-        2,
-        2,
-        'R',
-        uvec2(530, 300),
-        0,
+        screen_size,
+        uvec2(100, 400),
+        uvec2(70, 70),
+        0.0,
+        ExtraBufferData::NewData(RectMask {
+            position: (screen_size.as_vec2() * 0.5).as_uvec2(),
+            size: screen_size,
+        }),
+        &mask,
+        &color,
     );
-    render_char(
+
+    let mask = MaskType::Circle { border: None };
+    let color = ColoringType::Color(ExtraBufferData::NewData(RGBA::GREY));
+    let size_interp = ((f32::sin(system_time.time_data.time) * 50.0) as i32 + 100) as u32;
+    create_new_rect_element(
         gui_rects,
-        font_atlas_collection,
-        2,
-        2,
-        'I',
-        uvec2(560, 300),
-        0,
+        screen_size,
+        uvec2(100, 500),
+        uvec2(size_interp, 70),
+        0.0,
+        ExtraBufferData::NewData(RectMask {
+            position: (screen_size.as_vec2() * 0.5).as_uvec2(),
+            size: screen_size,
+        }),
+        &mask,
+        &color,
     );
+
+    let mask = MaskType::Circle { border: None };
+    let color = ColoringType::Color(ExtraBufferData::NewData(RGBA::RED));
+    let size_interp = ((f32::sin(system_time.time_data.time) * 50.0) as i32 + 100) as u32;
+    create_new_rect_element(
+        gui_rects,
+        screen_size,
+        uvec2(240, 100),
+        uvec2(size_interp, 70),
+        system_time.time_data.time * 2.0,
+        ExtraBufferData::NewData(RectMask {
+            position: (screen_size.as_vec2() * 0.5).as_uvec2(),
+            size: screen_size,
+        }),
+        &mask,
+        &color,
+    );
+
+    {
+        let glyph_char = 'T';
+        let e_char = font_atlas_collection[1]
+            .font_glyphs
+            .iter()
+            .find(|elem| elem.character == glyph_char)
+            .expect(format!("Glyph {} not found", glyph_char).as_str());
+        let mask = MaskType::SDFFont(ExtraBufferData::NewData(TextureSlice {
+            sample_component: 1,
+            slice_position: e_char.tex_coord,
+            size: e_char.get_padded_size(),
+            array_index: 0,
+        }));
+        let color = ColoringType::Color(ExtraBufferData::NewData(RGBA::GREEN));
+        create_new_rect_element(
+            gui_rects,
+            screen_size,
+            uvec2(200, 200),
+            e_char.get_padded_size() * 2,
+            system_time.time_data.time * 2.0,
+            ExtraBufferData::NewData(RectMask {
+                position: (screen_size.as_vec2() * 0.5).as_uvec2(),
+                size: screen_size,
+            }),
+            &mask,
+            &color,
+        );
+    }
+    {
+        let glyph_char = 'S';
+        let e_char_a = font_atlas_collection[1]
+            .font_glyphs
+            .iter()
+            .find(|elem| elem.character == glyph_char)
+            .expect(format!("Glyph {} not found", glyph_char).as_str());
+        let maska = MaskType::SDFFont(ExtraBufferData::NewData(TextureSlice {
+            sample_component: 1,
+            slice_position: e_char_a.tex_coord,
+            size: e_char_a.get_padded_size(),
+            array_index: 0,
+        }));
+        let color = ColoringType::Color(ExtraBufferData::NewData(RGBA::GREEN));
+        create_new_rect_element(
+            gui_rects,
+            screen_size,
+            uvec2(200, 300),
+            e_char_a.get_padded_size(),
+            system_time.time_data.time * 2.0,
+            ExtraBufferData::NewData(RectMask {
+                position: (screen_size.as_vec2() * 0.5).as_uvec2(),
+                size: screen_size,
+            }),
+            &maska,
+            &color,
+        );
+    }
+
+    let mask = MaskType::Rect { border: None };
+    let color = ColoringType::RadialGradient(ExtraBufferData::NewData(RadialGradient {
+        colors: [RGBA::GREY, RGBA::BLUE],
+        center_position: vec2(0.0, 0.0),
+        end_radius: 30.0,
+        start_radius: 0.0,
+    }));
+    create_new_rect_element(
+        gui_rects,
+        screen_size,
+        uvec2(240, 400),
+        uvec2(70, 70),
+        system_time.time_data.time * 2.0,
+        ExtraBufferData::NewData(RectMask {
+            position: (screen_size.as_vec2() * 0.5).as_uvec2(),
+            size: screen_size,
+        }),
+        &mask,
+        &color,
+    );
+
+    let mask = MaskType::Rect { border: None };
+    let color = ColoringType::RadialGradient(ExtraBufferData::NewData(RadialGradient {
+        colors: [RGBA::GREY, RGBA::BLUE.set_alpha(0.0)],
+        center_position: vec2(0.0, 0.0),
+        end_radius: 50.0,
+        start_radius: 15.0,
+    }));
+    create_new_rect_element(
+        gui_rects,
+        screen_size,
+        uvec2(240, 500),
+        uvec2(70, 70),
+        system_time.time_data.time * 2.0,
+        ExtraBufferData::NewData(RectMask {
+            position: (screen_size.as_vec2() * 0.5).as_uvec2(),
+            size: screen_size,
+        }),
+        &mask,
+        &color,
+    );
+
+    let mask = MaskType::RoundRect {
+        border_radius: ExtraBufferData::NewData(BorderRadius {
+            top_right: 5.0,
+            bottom_right: 10.0,
+            top_left: 15.0,
+            bottom_left: 20.0,
+        }),
+        border: None,
+    };
+    let color = ColoringType::RadialGradient(ExtraBufferData::NewData(RadialGradient {
+        colors: [RGBA::GREY, RGBA::BLUE.set_alpha(0.0)],
+        center_position: vec2(0.0, 0.0),
+        end_radius: 50.0,
+        start_radius: 15.0,
+    }));
+    create_new_rect_element(
+        gui_rects,
+        screen_size,
+        uvec2(310, 100),
+        uvec2(70, 70),
+        system_time.time_data.time * 2.0,
+        ExtraBufferData::NewData(RectMask {
+            position: (screen_size.as_vec2() * 0.5).as_uvec2(),
+            size: screen_size,
+        }),
+        &mask,
+        &color,
+    );
+    
+    let mask = MaskType::RoundRect {
+        border_radius: ExtraBufferData::NewData(BorderRadius {
+            top_right: 0.0,
+            bottom_right: 10.0,
+            top_left: 15.0,
+            bottom_left: 0.0,
+        }),
+        border: None,
+    };
+    let color = ColoringType::LinearGradient(ExtraBufferData::NewData(LinearGradient {
+        colors: [RGBA::GREY, RGBA::RED],
+        start_position: vec2(0.0, 0.0),
+        end_position: vec2(0.0, 35.0),
+    }));
+    create_new_rect_element(
+        gui_rects,
+        screen_size,
+        uvec2(310, 200),
+        uvec2(70, 70),
+        system_time.time_data.time * 2.0,
+        ExtraBufferData::NewData(RectMask {
+            position: (screen_size.as_vec2() * 0.5).as_uvec2(),
+            size: screen_size,
+        }),
+        &mask,
+        &color,
+    );
+
+    {
+        let glyph_char = 'E';
+        let e_char_a = font_atlas_collection[1]
+            .font_glyphs
+            .iter()
+            .find(|elem| elem.character == glyph_char)
+            .expect(format!("Glyph {} not found", glyph_char).as_str());
+        let maska = MaskType::SDFFont(ExtraBufferData::NewData(TextureSlice {
+            sample_component: 1,
+            slice_position: e_char_a.tex_coord,
+            size: e_char_a.get_padded_size(),
+            array_index: 0,
+        }));
+        let color = ColoringType::LinearGradient(ExtraBufferData::NewData(LinearGradient {
+            colors: [RGBA::GREEN, RGBA::RED],
+            start_position: vec2(0.0, e_char_a.get_padded_height() as f32 * -0.5),
+            end_position: vec2(0.0, e_char_a.get_padded_height() as f32 * 0.5),
+        }));
+        create_new_rect_element(
+            gui_rects,
+            screen_size,
+            uvec2(310, 300),
+            e_char_a.get_padded_size() * 2,
+            system_time.time_data.time * 2.0,
+            ExtraBufferData::NewData(RectMask {
+                position: (screen_size.as_vec2() * 0.5).as_uvec2(),
+                size: screen_size,
+            }),
+            &maska,
+            &color,
+        );
+    }
+
+    {
+        let glyph_char = 'E';
+        let e_char_a = font_atlas_collection[1]
+            .font_glyphs
+            .iter()
+            .find(|elem| elem.character == glyph_char)
+            .expect(format!("Glyph {} not found", glyph_char).as_str());
+        let maska = MaskType::SDFFont(ExtraBufferData::NewData(TextureSlice {
+            sample_component: 1,
+            slice_position: e_char_a.tex_coord,
+            size: e_char_a.get_padded_size(),
+            array_index: 0,
+        }));
+        let color = ColoringType::LinearGradient(ExtraBufferData::NewData(LinearGradient {
+            colors: [RGBA::BLUE, RGBA::WHITE],
+            start_position: vec2(e_char_a.get_padded_width() as f32 * -0.45, e_char_a.get_padded_height() as f32 * -0.5),
+            end_position: vec2(e_char_a.get_padded_width() as f32 * 0.45, e_char_a.get_padded_height() as f32 * 0.5),
+        }));
+        create_new_rect_element(
+            gui_rects,
+            screen_size,
+            uvec2(330, 400),
+            e_char_a.get_padded_size() * 2,
+            0.0,
+            ExtraBufferData::NewData(RectMask {
+                position: (screen_size.as_vec2() * 0.5).as_uvec2(),
+                size: screen_size,
+            }),
+            &maska,
+            &color,
+        );
+
+        let mask = MaskType::Circle { border: None };
+        let color = ColoringType::LinearGradient(ExtraBufferData::NewData(LinearGradient{
+            colors: [RGBA::RED, RGBA::WHITE],
+            start_position: vec2(f32::sin(system_time.time_data.time) * 20.0,0.0),
+            end_position: vec2(40.0, 0.0),
+        }));
+        create_new_rect_element(
+            gui_rects,
+            screen_size,
+            uvec2(330, 500),
+            uvec2(70, 70),
+            0.0,
+            ExtraBufferData::NewData(RectMask {
+                position: (screen_size.as_vec2() * 0.5).as_uvec2(),
+                size: screen_size,
+            }),
+            &mask,
+            &color,
+        );
+
+        let mask = MaskType::Circle { border: None };
+        let sin_time =f32::sin(system_time.time_data.time * 4.0);
+        let color = ColoringType::LinearGradient(ExtraBufferData::NewData(LinearGradient{
+            colors: [RGBA::RED, RGBA::WHITE],
+            start_position: vec2( sin_time* 20.0,sin_time * 20.0),
+            end_position: vec2(40.0, 40.0),
+        }));
+        let size_interp = ((f32::sin(system_time.time_data.time) * 50.0) as i32 + 100) as u32;
+        create_new_rect_element(
+            gui_rects,
+            screen_size,
+            uvec2(450, 100),
+            uvec2(size_interp, 70),
+            0.0,
+            ExtraBufferData::NewData(RectMask {
+                position: (screen_size.as_vec2() * 0.5).as_uvec2(),
+                size: screen_size,
+            }),
+            &mask,
+            &color,
+        );
+
+        let mask = MaskType::Circle { border: None };
+        let color = ColoringType::RadialGradient(ExtraBufferData::NewData(RadialGradient{
+            colors: [RGBA::RED, RGBA::WHITE],
+            center_position: vec2(0.0,0.0),
+            end_radius: 30.0,
+            start_radius: 20.0,
+        }));
+        let sin_time = f32::sin(system_time.time_data.time * 3.0);
+        let size_interp = ((sin_time * 30.0) as i32 + 60) as u32;
+        create_new_rect_element(
+            gui_rects,
+            screen_size,
+            uvec2(450, 250),
+            uvec2(100, size_interp),
+            0.0,
+            ExtraBufferData::NewData(RectMask {
+                position: (screen_size.as_vec2() * 0.5).as_uvec2(),
+                size: screen_size,
+            }),
+            &mask,
+            &color,
+        );
+
+        let mask = MaskType::Circle { border: None };
+        let color = ColoringType::RadialGradient(ExtraBufferData::NewData(RadialGradient{
+            colors: [RGBA::BLUE, RGBA::RED.set_alpha(0.0)],
+            center_position: vec2(0.0,0.0),
+            end_radius: 60.0,
+            start_radius: 10.0,
+        }));
+        let sin_time_rot = f32::sin(system_time.time_data.time * 4.0) * 4.0;
+        let sin_time = f32::sin(system_time.time_data.time * 2.0);
+        let size_interp = ((sin_time * 30.0) as i32 + 60) as u32;
+        create_new_rect_element(
+            gui_rects,
+            screen_size,
+            uvec2(450, 400),
+            uvec2(100, size_interp),
+            sin_time_rot,
+            ExtraBufferData::NewData(RectMask {
+                position: (screen_size.as_vec2() * 0.5).as_uvec2(),
+                size: screen_size,
+            }),
+            &mask,
+            &color,
+        );
+
+        let mask = MaskType::Circle { border: None };
+        let color = ColoringType::RadialGradient(ExtraBufferData::NewData(RadialGradient{
+            colors: [RGBA::BLUE, RGBA::RED],
+            center_position: vec2(0.0,0.0),
+            end_radius: 100.0,
+            start_radius: 10.0,
+        }));
+        let sin_time = f32::sin(system_time.time_data.time * 2.0);
+        create_new_rect_element(
+            gui_rects,
+            screen_size,
+            uvec2(650, 400),
+            uvec2(300, 150),
+            0.6,
+            ExtraBufferData::NewData(RectMask {
+                position: uvec2(450, 450),
+                size: uvec2(380, 225),
+            }),
+            &mask,
+            &color,
+        );
+
+        let sin_time = f32::sin(system_time.time_data.time * 2.0);
+        let cos_time = f32::cos(system_time.time_data.time * 1.5);
+        let mask = MaskType::Circle { border: None };
+        let color = ColoringType::RadialGradient(ExtraBufferData::NewData(RadialGradient{
+            colors: [RGBA::BLUE, RGBA::WHITE],
+            center_position: vec2(sin_time * 40.0,cos_time * 20.0),
+            end_radius: 70.0,
+            start_radius: 30.0,
+        }));
+        let sin_time = f32::sin(system_time.time_data.time * 3.0);
+        let size_interp = ((sin_time * 50.0) as i32 + 100) as u32;
+        create_new_rect_element(
+            gui_rects,
+            screen_size,
+            uvec2(650, 250),
+            uvec2(180, size_interp),
+            0.0,
+            ExtraBufferData::NewData(RectMask {
+                position: (screen_size.as_vec2() * 0.5).as_uvec2(),
+                size: screen_size,
+            }),
+            &mask,
+            &color,
+        );
+    }
 }
