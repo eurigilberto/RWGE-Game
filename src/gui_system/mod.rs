@@ -1,94 +1,101 @@
-use std::{
-    collections::HashMap,
-    mem::{discriminant, Discriminant},
-};
-
 mod test;
+use std::any::{TypeId, Any};
+
 use test::test_screen;
 
 use rwge::{
     color::RGBA,
     engine,
-    entity_component::{EngineDataTypeKey, PublicDataCollection},
     font::font_atlas::FontAtlas,
     glam::{uvec2, UVec2},
     gui::rect_ui::{
         element::{create_new_rect_element, ColoringType, MaskType},
         event::UIEvent,
         graphic::RectGraphic,
-        slotmap::GUIContainer,
         system::{BorderRadius, ExtraBufferData, GUIRects, RectMask},
     },
-    render_system::RenderSystem,
+    render_system::{render_texture::RenderTexture, RenderSystem},
     slotmap::slotmap::{SlotKey, Slotmap},
     wgpu,
     winit::window,
-    Engine, EngineDataType,
+    Engine,
 };
 
-use crate::{DataType, DataTypeKey};
+use crate::{public_data::{utils::get_render_texture, PublicData, self}, anymap::Anymap};
 
-pub struct WindowOne {
-    pub size: UVec2,
-    pub name: String,
-    pub value: f32,
+pub struct WOne{
+    pub index: u32,
+    pub ans: u32
 }
 
-impl GUIContainer<PublicDataCollection<DataTypeKey, DataType>> for WindowOne {
-    fn get_name(&self) -> &String {
-        &self.name
+impl WOne{
+    pub fn new()->Self{
+        Self { index: 0, ans: 202 }
+    }
+}
+
+pub struct WTwo{
+    pub index: u32,
+    pub ans: u32
+}
+
+trait AsAny {
+    fn as_any(&self)->&dyn Any;
+}
+
+impl WTwo{
+    pub fn new()->Self{
+        Self { index: 2, ans: 859 }
+    }
+}
+
+impl GUIContainer for WOne{
+    fn get_name(&self)->&str {
+        "WOne"
     }
 
-    fn handle_event(
-        &self,
-        event: &mut UIEvent,
-        public_data: &mut PublicDataCollection<DataTypeKey, DataType>,
-        engine: &Engine,
-    ) {
-        match event {
-            UIEvent::Render {
-                gui_rects,
-                container_size,
-                container_position,
-            } => {
-                let texture_mask_val: u32 = 3;
-                let element_type: u32 = 0;
+    fn handle_event(&self, event: &mut UIEvent, public_data: &mut PublicData) {
+        println!("handling events WOne")
+    }
+}
 
-                let dv13 = texture_mask_val << 8 | element_type;
-
-                let color_index = gui_rects.rect_collection.color.cpu_vector.len() + 1;
-                gui_rects
-                    .rect_collection
-                    .color
-                    .cpu_vector
-                    .push([0.3, 0.75, 0.3, 1.0]);
-
-                let test_rect = RectGraphic {
-                    position_size: [
-                        container_position.x,
-                        container_position.y,
-                        container_size.x,
-                        container_size.y,
-                    ],
-                    data_vector_0: [0, 0, 0, color_index as u32],
-                    data_vector_1: [0.0, 0.0, 0.0, dv13 as f32],
-                };
-                gui_rects
-                    .rect_collection
-                    .rect_graphic
-                    .cpu_vector
-                    .push(test_rect);
-            }
-            _ => {}
-        }
+impl GUIContainer for WTwo{
+    fn get_name(&self)->&str {
+        "WTwo"
     }
 
-    fn allow_resize(&self) -> bool {
-        true
-    }
+    fn handle_event(&self, event: &mut UIEvent, public_data: &mut PublicData) {
+        println!("handling events WTwo")
+    }   
+}
 
-    fn get_size(&self) -> UVec2 {
-        self.size
+trait GUIContainer:AsAny {
+    fn get_name(&self)->&str;
+    fn handle_event(&self, event: &mut UIEvent, public_data: &mut PublicData);
+    // When contained in a window, this is going to be used for the size if an specific one is nee
+    // Not sure how this call should work yet
+    //fn required_size(&self)->Option<UVec2>;
+}
+
+impl <T:GUIContainer + 'static> AsAny for T{
+    fn as_any(&self)->&dyn Any {
+        self
+    }
+}
+
+#[test]
+pub fn testing_things(){
+    let mut gui_containers = Slotmap::<Box<dyn GUIContainer>>::new_with_capacity(10);
+    let gui_container = WOne::new();
+    let key0 = gui_containers.push(Box::new(gui_container));
+    let gui_container = WTwo::new();
+    let key1 = gui_containers.push(Box::new(gui_container));
+
+    {
+        let container_thing = gui_containers.get_value_mut(&key1.expect(""));
+        let c_t = container_thing.unwrap();
+        
+        let thing: &WTwo = AsAny::as_any(c_t.as_ref()).downcast_ref().expect("imposible to cast?");
     }
 }
 
@@ -98,58 +105,16 @@ pub struct WindowContainer {
     pub size: UVec2,
 }
 
-impl WindowContainer {
-    fn handle_event(&mut self, event: &mut UIEvent, engine: &Engine) {
-        match event {
-            UIEvent::MouseButton(button) => {}
-            UIEvent::MouseMove(position) => {
-                self.position = position.data.as_uvec2();
-            }
-            UIEvent::MouseWheel(_) => {}
-            UIEvent::KeyboardInput(_) => {}
-            UIEvent::Update => {}
-            UIEvent::Render {
-                gui_rects,
-                container_size,
-                container_position,
-            } => {}
-        }
-    }
-}
-
 /// This version of the window system is only going to work with windowed spaces. This needs to be refactored in the future to support docking.
 pub struct GUISystem {
-    pub active_window_collection: Vec<WindowContainer>,
-    pub window_collection:
-        Slotmap<Box<dyn GUIContainer<PublicDataCollection<DataTypeKey, DataType>>>>,
     pub screen_size: UVec2,
 }
 
 impl GUISystem {
     pub fn new(screen_size: UVec2) -> Self {
-        let mut window_collection: Slotmap<
-            Box<dyn GUIContainer<PublicDataCollection<DataTypeKey, DataType>>>,
-        > = Slotmap::new_with_capacity(20);
-        let slot_key = window_collection
-            .push(Box::new(WindowOne {
-                size: uvec2(100, 200),
-                name: String::from("Test 1"),
-                value: 20.0,
-            }))
-            .expect("Could not push a new window to collection");
-
-        let mut active_window_collection: Vec<WindowContainer> =
-            Vec::<WindowContainer>::with_capacity(20);
-
-        active_window_collection.push(WindowContainer {
-            slot_key: slot_key,
-            position: uvec2(500, 500),
-            size: uvec2(200, 250),
-        });
-
         Self {
-            active_window_collection,
-            window_collection,
+            //active_window_collection,
+            //window_collection,
             screen_size,
         }
     }
@@ -157,22 +122,13 @@ impl GUISystem {
     pub fn handle_event(
         &mut self,
         event: &mut UIEvent,
-        public_data: &mut PublicDataCollection<DataTypeKey, DataType>,
+        public_data: &mut PublicData,
         engine: &Engine,
     ) {
-        for window_container in self.active_window_collection.iter_mut() {
-            //window_container.handle event or something
-
-            window_container.handle_event(event, engine);
-
-            self.window_collection
-                .get_value_mut(&window_container.slot_key)
-                .expect("Window was removed")
-                .handle_event(event, public_data, engine);
-        }
+        // Handle Any event FGUI
     }
 
-    pub fn update(&mut self, public_data: &mut PublicDataCollection<DataTypeKey, DataType>) {
+    pub fn update(&mut self, public_data: &mut PublicData) {
         /* Nothing yet - The UIEvent to be sent to the GUI containers is going to be created here */
     }
 
@@ -185,46 +141,32 @@ impl GUISystem {
         engine: &Engine,
         gui_rects: &mut GUIRects,
         encoder: &mut rwge::wgpu::CommandEncoder,
-        public_data: &mut PublicDataCollection<DataTypeKey, DataType>,
+        public_data: &mut PublicData,
         font_atlas_collection: &Vec<FontAtlas>,
     ) {
         gui_rects.rect_collection.clear_buffers();
 
         {
-            /*let window_count = self.active_window_collection.len();
-            for forward_index in 0..window_count {
-                let window_index = window_count - 1 - forward_index;
-                let window_container = &mut self.active_window_collection[window_index];
-                //window_container.render background
-                let mut event = UIEvent::Render {
-                    gui_rects: gui_rects,
-                    container_size: window_container.size,
-                    container_position: window_container.position,
-                };
-                self.window_collection
-                    .get_value_mut(&window_container.slot_key)
-                    .expect("Window not found")
-                    .handle_event(&mut event, public_data, engine);
-            }*/
-            
-            test_screen(&engine.time, gui_rects, font_atlas_collection, self.screen_size);
+            test_screen(
+                &engine.time,
+                gui_rects,
+                font_atlas_collection,
+                self.screen_size,
+            );
         }
 
         gui_rects
             .rect_collection
             .update_gpu_buffers(&engine.render_system);
 
-        if let DataType::Base(EngineDataType::RenderTexture(render_texture_slotmap)) = public_data
-            .collection
-            .get(&DataTypeKey::Base(EngineDataTypeKey::RenderTexture))
-            .expect("No Render Texture collection was found")
         {
-            let color_rt = render_texture_slotmap
-                .get_value(&gui_rects.render_texture.color_texture_key.key)
-                .expect("Color Render Texture not found");
-            let mask_rt = render_texture_slotmap
-                .get_value(&gui_rects.render_texture.mask_texture_key.key)
-                .expect("Mask Render Texture not found");
+            let color_rt =
+                get_render_texture(&public_data, &gui_rects.render_texture.color_texture_key)
+                    .expect("GUI Color render target was not present");
+            let mask_rt =
+                get_render_texture(&public_data, &gui_rects.render_texture.mask_texture_key)
+                    .expect("GUI Masking render target was not present");
+
             rwge::gui::rect_ui::render_pass::render_gui(
                 encoder,
                 &gui_rects,
@@ -232,8 +174,6 @@ impl GUISystem {
                 &color_rt.texture_view,
                 &mask_rt.texture_view,
             );
-        } else {
-            panic!("Render texture slotmap not found or Color / Mask RT not found");
         }
     }
 }

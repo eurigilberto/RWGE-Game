@@ -1,6 +1,5 @@
 use rwge::{
     color::RGBA,
-    entity_component::PublicDataCollection,
     font::font_atlas::FontAtlas,
     glam::{uvec2, UVec2, vec2},
     gui::rect_ui::{
@@ -11,65 +10,6 @@ use rwge::{
     render_system::RenderSystem,
     wgpu,
 };
-
-use crate::{DataType, DataTypeKey};
-
-pub fn render_char(
-    gui_rects: &mut GUIRects,
-    font_atlas_collection: &Vec<FontAtlas>,
-    collection_index: usize,
-    component_index: u32,
-    glyph_char: char,
-    position: UVec2,
-    rotation: u32,
-) {
-    /*let e_char = font_atlas_collection[collection_index]
-        .font_glyphs
-        .iter()
-        .find(|elem| elem.character == glyph_char)
-        .expect(format!("Glyph {} not found", glyph_char).as_str());
-
-    gui_rects
-        .rect_collection
-        .color
-        .cpu_vector
-        .push([0.5, 0.5, 0.2, 1.0]);
-
-    let char_size = e_char.get_padded_size();
-    let packed_char_size = (char_size.x & 0x0000ffff) << 16 | (char_size.y & 0x0000ffff);
-
-    //There needs to be a place in the font atlas where it specifies the texture slice
-    let packed_texture_selection = (0) << 4 | component_index;
-
-    let tx_pos_index = gui_rects.rect_collection.texture_position.cpu_vector.len();
-    gui_rects.rect_collection.texture_position.cpu_vector.push([
-        e_char.tex_coord.x,
-        e_char.tex_coord.y,
-        packed_char_size,
-        packed_texture_selection,
-    ]);
-
-    let texture_mask_val: u32 = 0;
-    let _type: u32 = 1;
-
-    let dv13 = texture_mask_val << 8 | _type;
-
-    let test_rect = RectGraphic {
-        position_size: [
-            position.x,
-            position.y,
-            ((char_size.x as f32) * 2.0) as u32,
-            ((char_size.y as f32) * 2.0) as u32,
-        ],
-        data_vector_0: [0, tx_pos_index as u32 + 1, 0, 2],
-        data_vector_1: [0, rotation, 0, dv13],
-    };
-    gui_rects
-        .rect_collection
-        .rect_graphic
-        .cpu_vector
-        .push(test_rect);*/
-}
 
 pub fn test_screen(
     system_time: &rwge::engine_time::EngineTime,
