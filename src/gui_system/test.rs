@@ -5,7 +5,7 @@ use rwge::{
     gui::rect_ui::{
         element::{create_new_rect_element, ColoringType, MaskType, RadialGradient, TextureSlice, LinearGradient},
         graphic::RectGraphic,
-        system::{BorderRadius, ExtraBufferData, GUIRects, RectMask},
+        BorderRadius, ExtraBufferData, GUIRects, RectMask,
     },
     render_system::RenderSystem,
     wgpu,

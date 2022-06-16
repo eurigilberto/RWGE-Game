@@ -1,12 +1,4 @@
-use std::collections::HashMap;
-
-use rwge::{
-    render_system::render_texture::RenderTexture,
-    slotmap::slotmap::{SlotKey, Slotmap},
-    glam::{UVec2, uvec2},
-};
-
-use crate::anymap::{self, Anymap};
+use crate::anymap::{Anymap};
 
 pub struct PublicData{
     pub collection: Anymap

@@ -3,7 +3,7 @@ mod gui_font;
 mod public_data;
 use gui_font::write_font_to_gpu;
 use public_data::PublicData;
-pub use rwge::gui::rect_ui::system::GUIRects;
+pub use rwge::gui::rect_ui::GUIRects;
 mod gui_system;
 use gui_system::GUISystem;
 use rwge::{
@@ -18,6 +18,7 @@ use rwge::{
     Engine,
 };
 mod anymap;
+mod as_any;
 struct Game {
     gui_rects: GUIRects,
     gui_copy_texture_surface: CopyTextureToSurface,

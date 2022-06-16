@@ -1,6 +1,6 @@
 use std::num::NonZeroU32;
 
-use rwge::{half, Engine, gui::rect_ui::system::GUIRects, font::font_atlas::{FontAtlas, FontCharLimit}, glam::uvec2};
+use rwge::{half, Engine, gui::rect_ui::GUIRects, font::font_atlas::{FontAtlas, FontCharLimit}, glam::uvec2};
 
 pub fn write_font_to_gpu(engine: &Engine, gui_rects: &GUIRects) -> Vec<FontAtlas> {
     let font_data_1 = include_bytes!("../res/fonts/NeoSans/NeoSansStd-MediumItalic.otf");
