@@ -2,7 +2,7 @@ use std::num::NonZeroU32;
 mod gui_font;
 mod public_data;
 use gui_font::write_font_to_gpu;
-use public_data::PublicData;
+use public_data::{EngineData, PublicData};
 pub use rwge::gui::rect_ui::GUIRects;
 mod gui_system;
 use gui_system::GUISystem;
@@ -24,6 +24,7 @@ struct Game {
     gui_copy_texture_surface: CopyTextureToSurface,
     gui_system: GUISystem,
     public_data: PublicData,
+    public_data_changes: Vec<Box<dyn FnMut(&mut PublicData) -> ()>>,
     font_atlas_collection: Vec<FontAtlas>,
 }
 
@@ -57,13 +58,23 @@ impl Game {
         let mut public_data = PublicData::new();
         public_data.collection.insert(render_texture_slotmap);
 
+        let engine_data = EngineData {
+            time: 0.0,
+            time_millis: 0.0,
+            screen_size: engine.render_system.render_window.size,
+        };
+        public_data.collection.insert(engine_data);
+
         let font_atlas_collection = write_font_to_gpu(engine, &gui_rects);
         let gui_copy_texture_surface =
             create_gui_copy_texture_to_surface(&mut public_data, &gui_rects, engine);
+
+        let public_data_changes = Vec::<Box<dyn FnMut(&mut PublicData) -> ()>>::with_capacity(50);
         Self {
             gui_rects,
             gui_system,
             public_data,
+            public_data_changes,
             gui_copy_texture_surface,
             font_atlas_collection,
         }
@@ -81,10 +92,28 @@ impl rwge::Runtime for Game {
     {
         for event in event_queue {
             let close_event_handled = rwge::default_close_event_handler(event, exit_event_loop);
+
+            self.public_data
+                .collection
+                .get_mut::<EngineData>()
+                .unwrap()
+                .time = engine.time.time_data.time;
+
+            self.public_data
+                .collection
+                .get_mut::<EngineData>()
+                .unwrap()
+                .time_millis = engine.time.time_data.time_milis;
+
             if !close_event_handled {
                 let size_event = RenderSystem::resize_event_transformation(event);
                 if let Some(new_size) = size_event {
                     //Resize event
+                    self.public_data
+                        .collection
+                        .get_mut::<EngineData>()
+                        .unwrap()
+                        .screen_size = new_size;
                     let rt_slotmap = self
                         .public_data
                         .collection
@@ -104,7 +133,7 @@ impl rwge::Runtime for Game {
                     );
                     if let Some(mut e) = gui_event {
                         self.gui_system
-                            .handle_event(&mut e, &mut self.public_data, &engine);
+                            .handle_event(&mut e, &mut self.public_data, &Some(&mut self.public_data_changes), &engine);
                     }
                 }
             }
@@ -121,6 +150,8 @@ impl rwge::Runtime for Game {
         screen_view: &rwge::wgpu::TextureView,
         encoder: &mut rwge::wgpu::CommandEncoder,
     ) {
+        ///////// APPLY PUBLIC DATA CHANGES
+
         rwge::render_system::texture::clear_render_targets(
             encoder,
             screen_view,

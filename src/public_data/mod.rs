@@ -1,3 +1,5 @@
+use rwge::glam::UVec2;
+
 use crate::anymap::{Anymap};
 
 pub struct PublicData{
@@ -7,6 +9,12 @@ impl PublicData{
     pub fn new()->Self{
         Self { collection: Anymap::new()}
     }
+}
+
+pub struct EngineData{
+    pub time: f32,
+    pub time_millis: f32,
+    pub screen_size: UVec2
 }
 
 pub mod utils{

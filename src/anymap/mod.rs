@@ -11,6 +11,7 @@ impl Anymap{
             map: HashMap::new(),
         }
     }
+    /// If data is already in the map, then it is returned if not it returns `None`
     pub fn insert<T>(&mut self, data: T) -> Option<T>
     where
         T: Sized + 'static,
