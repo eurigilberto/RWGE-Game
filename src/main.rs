@@ -6,11 +6,13 @@ use public_data::{EngineData, PublicData};
 pub use rwge::gui::rect_ui::GUIRects;
 mod gui_system;
 use gui_system::GUISystem;
+
 use rwge::{
     color::RGBA,
     font,
     font::font_atlas::FontAtlas,
     glam::{uvec2, Vec2},
+    gui::rect_ui::event::UIEvent,
     half,
     render_system::copy_texture_to_surface::CopyTextureToSurface,
     render_system::{render_texture::RenderTexture, RenderSystem},
@@ -19,6 +21,7 @@ use rwge::{
 };
 mod anymap;
 mod as_any;
+
 struct Game {
     gui_rects: GUIRects,
     gui_copy_texture_surface: CopyTextureToSurface,
@@ -58,11 +61,7 @@ impl Game {
         let mut public_data = PublicData::new();
         public_data.collection.insert(render_texture_slotmap);
 
-        let engine_data = EngineData {
-            time: 0.0,
-            time_millis: 0.0,
-            screen_size: engine.render_system.render_window.size,
-        };
+        let engine_data = EngineData::new_from_engine(engine);
         public_data.collection.insert(engine_data);
 
         let font_atlas_collection = write_font_to_gpu(engine, &gui_rects);
@@ -82,6 +81,10 @@ impl Game {
 }
 
 impl rwge::Runtime for Game {
+    fn frame_start(&mut self, engine: &Engine) {
+        public_data::utils::update_engine_time(&mut self.public_data, &engine.time);
+    }
+
     fn handle_event_queue<F>(
         &mut self,
         event_queue: &Vec<rwge::EngineEvent>,
@@ -93,47 +96,44 @@ impl rwge::Runtime for Game {
         for event in event_queue {
             let close_event_handled = rwge::default_close_event_handler(event, exit_event_loop);
 
-            self.public_data
-                .collection
-                .get_mut::<EngineData>()
-                .unwrap()
-                .time = engine.time.time_data.time;
-
-            self.public_data
-                .collection
-                .get_mut::<EngineData>()
-                .unwrap()
-                .time_millis = engine.time.time_data.time_milis;
-
             if !close_event_handled {
                 let size_event = RenderSystem::resize_event_transformation(event);
                 if let Some(new_size) = size_event {
                     //Resize event
-                    self.public_data
-                        .collection
-                        .get_mut::<EngineData>()
-                        .unwrap()
-                        .screen_size = new_size;
+                    public_data::utils::update_screen_size(&mut self.public_data, new_size);
+
                     let rt_slotmap = self
                         .public_data
                         .collection
                         .get_mut::<Slotmap<RenderTexture>>()
                         .expect("Render texture slotmap not found");
-                    self.gui_system.resize(new_size);
                     self.gui_rects
-                        .resize(new_size, &mut engine.render_system, rt_slotmap);
+                        .resize(new_size, &engine.render_system, rt_slotmap);
+
                     let gui_color_rt = &self.gui_rects.get_color_rt(rt_slotmap);
                     self.gui_copy_texture_surface
                         .update_texture_view(&gui_color_rt.texture_view, &engine.render_system);
                     engine.render_system.render_window.resize(new_size);
+
+                    
+                    let mut resize_ui_event = UIEvent::Resize(new_size);
+                    self.gui_system.handle_event(
+                        &mut resize_ui_event,
+                        &mut self.public_data,
+                        &Some(&mut self.public_data_changes),
+                    );
+                    
                 } else {
                     let gui_event = rwge::gui::rect_ui::event::default_event_transformation(
                         event,
                         engine.render_system.render_window.size,
                     );
                     if let Some(mut e) = gui_event {
-                        self.gui_system
-                            .handle_event(&mut e, &mut self.public_data, &Some(&mut self.public_data_changes), &engine);
+                        self.gui_system.handle_event(
+                            &mut e,
+                            &mut self.public_data,
+                            &Some(&mut self.public_data_changes),
+                        );
                     }
                 }
             }
@@ -146,7 +146,7 @@ impl rwge::Runtime for Game {
 
     fn render(
         &mut self,
-        engine: &mut rwge::Engine,
+        engine: &rwge::Engine,
         screen_view: &rwge::wgpu::TextureView,
         encoder: &mut rwge::wgpu::CommandEncoder,
     ) {

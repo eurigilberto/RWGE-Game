@@ -19,7 +19,7 @@ use rwge::{
     Engine,
 };
 
-use crate::public_data::{utils::get_render_texture, PublicData};
+use crate::public_data::{utils::{get_render_texture, get_engine_data}, PublicData};
 
 use self::{
     gui_container::{container_one::ContainerOne, GUIContainer},
@@ -94,7 +94,7 @@ impl GUISystem {
             .create_vertical_layout_element(vec![
                 DividedElement {
                     layout_key: single_2,
-                    size: 1.0,
+                    size: 3.0,
                 },
                 DividedElement {
                     layout_key: horizontal_1,
@@ -107,7 +107,7 @@ impl GUISystem {
             .create_vertical_layout_element(vec![
                 DividedElement {
                     layout_key: single_1,
-                    size: 1.0,
+                    size: 1.5,
                 },
                 DividedElement {
                     layout_key: single_2,
@@ -115,7 +115,7 @@ impl GUISystem {
                 },
                 DividedElement {
                     layout_key: single_3,
-                    size: 1.0,
+                    size: 2.0,
                 },
             ])
             .unwrap();
@@ -139,8 +139,8 @@ impl GUISystem {
 
         let window_1 = window_layouting.create_window(
             horizontal_2,
-            screen_size,
-            (screen_size.as_vec2() * 0.5).as_uvec2(),
+            screen_size.as_vec2(),
+            screen_size.as_vec2() * 0.5,
         );
 
         Self {
@@ -155,9 +155,14 @@ impl GUISystem {
         event: &mut UIEvent,
         public_data: &mut PublicData,
         public_data_changes: &Option<&mut Vec<Box<dyn FnMut(&mut PublicData) -> ()>>>,
-        engine: &Engine,
     ) {
         // Handle Any event FGUI
+        match event {
+            UIEvent::Resize(new_size) => {
+                self.resize(*new_size);
+            },
+            _=>{}
+        }
         self.window_layouting.handle_event(event, public_data_changes, public_data)
     }
 
@@ -183,7 +188,7 @@ impl GUISystem {
             let mut event = UIEvent::Render { gui_rects };
             self.window_layouting.handle_event(&mut event, &None, public_data);
             test_screen(
-                &engine.time,
+                &get_engine_data(public_data).time,
                 gui_rects,
                 font_atlas_collection,
                 self.screen_size,

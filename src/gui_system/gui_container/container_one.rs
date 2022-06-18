@@ -1,14 +1,14 @@
 use rwge::{
     color::RGBA,
     gui::rect_ui::{
-        element::{create_new_rect_element, ColoringType, MaskType},
+        element::{create_new_rect_element, ColoringType, MaskType, builder::ElementBuilder},
         event::UIEvent,
         BorderRadius, ExtraBufferData, RectMask,
     },
-    Engine, glam::UVec2,
+    Engine, glam::{UVec2, Vec2},
 };
 
-use crate::public_data::{PublicData, EngineData};
+use crate::public_data::{PublicData, EngineData, self};
 
 use super::GUIContainer;
 
@@ -28,34 +28,23 @@ impl GUIContainer for ContainerOne {
         event: &mut UIEvent,
         public_data_changes: &Option<&mut Vec<Box<dyn FnMut(&mut PublicData) -> ()>>>,
         public_data: &PublicData,
-        size: UVec2, position: UVec2
+        size: Vec2, position: Vec2
     ) {
         //test
         match event {
             UIEvent::Render {
                 gui_rects,
             } => {
-                let mask = MaskType::Rect { border: None };
-                let color = ColoringType::Color(ExtraBufferData::NewData(RGBA {
+                let screen_size = public_data::utils::get_engine_data(public_data).screen_size;
+                ElementBuilder::new(screen_size, position, size).set_color(RGBA {
                     r: 0.2,
                     g: self.value,
                     b: 0.75,
                     a: 1.0,
-                }));
-                let rect_mask = ExtraBufferData::NewData(RectMask {
+                }.into()).set_rect_mask(RectMask {
                     position: position,
                     size: size,
-                });
-                let element = create_new_rect_element(
-                    gui_rects,
-                    public_data.collection.get::<EngineData>().unwrap().screen_size,
-                    position,
-                    size,
-                    0.0,
-					rect_mask,
-					&mask,
-					&color
-                );
+                }.into()).build(gui_rects);
             }
             _ => {}
         }

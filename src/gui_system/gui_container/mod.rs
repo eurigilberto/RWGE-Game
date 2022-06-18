@@ -2,7 +2,7 @@ pub mod container_one;
 
 use std::any::Any;
 
-use rwge::{glam::UVec2, gui::rect_ui::event::UIEvent, Engine};
+use rwge::{glam::{UVec2, Vec2}, gui::rect_ui::event::UIEvent, Engine};
 
 use crate::{as_any::AsAny, public_data::PublicData};
 
@@ -13,8 +13,8 @@ pub trait GUIContainer: AsAny {
         event: &mut UIEvent,
         public_data_changes: &Option<&mut Vec<Box<dyn FnMut(&mut PublicData) -> ()>>>,
         public_data: &PublicData,
-        size: UVec2,
-        position: UVec2
+        size: Vec2,
+        position: Vec2
     );
 }
 

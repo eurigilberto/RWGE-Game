@@ -1,35 +1,41 @@
+use std::ops::Deref;
+
 //For now the style of the tabs is going to be fixed
 use rwge::{
-    color::RGBA,
-    glam::{uvec2, UVec2},
+    color::{HSLA, RGBA},
+    glam::{uvec2, vec2, UVec2, Vec2},
     gui::rect_ui::{
-        element::{create_new_rect_element, ColoringType, MaskType},
+        element::{builder::ElementBuilder, create_new_rect_element, ColoringType, MaskType},
         event::UIEvent,
         ExtraBufferData, RectMask,
     },
-    slotmap::slotmap::{SlotKey, Slotmap},
+    slotmap::slotmap::{SlotKey, Slotmap}, math_utils::lerp_f32,
 };
 
-use crate::public_data::{self, EngineData, PublicData};
+use crate::public_data::{self, utils::get_engine_data, EngineData, PublicData};
 
 use super::gui_container::GUIContainer;
 
-#[derive(Clone, Copy)]
-pub struct GUIContainerSlotkey(pub SlotKey);
-#[derive(Clone, Copy)]
-pub struct TabsContainerSlotKey(pub SlotKey);
-#[derive(Clone, Copy)]
-pub struct LayoutElementSlotKey(pub SlotKey);
-#[derive(Clone, Copy)]
-pub struct WindowSlotKey(pub SlotKey);
+rwge::create_custom_key!(
+    GUIContainerSlotkey;
+);
+rwge::create_custom_key!(
+    TabsSlotKey;
+);
+rwge::create_custom_key!(
+    LayoutSlotKey;
+);
+rwge::create_custom_key!(
+    WindowSlotKey;
+);
 
 pub struct DividedElement {
-    pub layout_key: LayoutElementSlotKey,
+    pub layout_key: LayoutSlotKey,
     pub size: f32,
 }
 
 pub enum LayoutElement {
-    Single(TabsContainerSlotKey),
+    Single(TabsSlotKey),
     Horizontal(Vec<DividedElement>),
     Vertical(Vec<DividedElement>),
 }
@@ -50,6 +56,9 @@ impl LayoutElement {
                 (LayoutElement::Vertical(_), LayoutElement::Vertical(_)) => return false,
                 (_, _) => {}
             }
+        }
+        if children.len() == 1 {
+            return false;
         }
         return true;
     }
@@ -74,14 +83,14 @@ impl LayoutElement {
         mut layout: LayoutElement,
         new_children: Vec<DividedElement>,
         layout_elements: &mut Slotmap<LayoutElement>,
-    ) -> Option<LayoutElementSlotKey> {
+    ) -> Option<LayoutSlotKey> {
         let valid = layout.validate_children(&new_children, &layout_elements);
         if !valid {
             None
         } else {
             layout.push_children(new_children);
             match layout_elements.push(layout) {
-                Some(slot_key) => Some(LayoutElementSlotKey(slot_key)),
+                Some(slot_key) => Some(LayoutSlotKey(slot_key)),
                 None => None,
             }
         }
@@ -90,7 +99,7 @@ impl LayoutElement {
     pub fn create_horizontal(
         new_children: Vec<DividedElement>,
         layout_elements: &mut Slotmap<LayoutElement>,
-    ) -> Option<LayoutElementSlotKey> {
+    ) -> Option<LayoutSlotKey> {
         let horizontal_layout = LayoutElement::Horizontal(Vec::<DividedElement>::new());
         Self::validate_and_create(horizontal_layout, new_children, layout_elements)
     }
@@ -98,7 +107,7 @@ impl LayoutElement {
     pub fn create_vertical(
         new_children: Vec<DividedElement>,
         layout_elements: &mut Slotmap<LayoutElement>,
-    ) -> Option<LayoutElementSlotKey> {
+    ) -> Option<LayoutSlotKey> {
         let vertical_layout = LayoutElement::Vertical(Vec::<DividedElement>::new());
         Self::validate_and_create(vertical_layout, new_children, layout_elements)
     }
@@ -106,22 +115,99 @@ impl LayoutElement {
     pub fn handle_event(
         &mut self,
         event: &mut UIEvent,
-        size: UVec2,
-        position: UVec2,
-    ) -> Vec<LayoutInfo> {
+        size: Vec2,
+        position: Vec2,
+    ) -> Vec<LayoutOrTabInfo> {
         match self {
             LayoutElement::Single(tab_container) => {
                 // How to render the tab?
-                Vec::<LayoutInfo>::new()
+                let mut tab = Vec::<LayoutOrTabInfo>::new();
+                tab.push(LayoutOrTabInfo {
+                    key: LayoutOrTabKey::TabKey(tab_container.clone()),
+                    size,
+                    position,
+                });
+                tab
             }
             LayoutElement::Horizontal(children) => {
-                Vec::<LayoutInfo>::new()
+                let margin: f32 = 10.0;
+                let inner_size = size;
+                let start_pos = position.x - inner_size.x * 0.5;
+
+                let children_sizes =
+                    compute_children_sizes(children, start_pos, inner_size.x, 10.0, Sign::Positive);
+                children_sizes
+                    .iter()
+                    .map(|(key, size, pos)| LayoutOrTabInfo {
+                        key: key.clone(),
+                        size: vec2(*size, inner_size.y),
+                        position: vec2(*pos, position.y),
+                    })
+                    .collect()
             }
-            LayoutElement::Vertical(children) =>{
-                Vec::<LayoutInfo>::new()
-            },
+            LayoutElement::Vertical(children) => {
+                let margin: f32 = 10.0;
+                let inner_size = size;
+                let start_pos = position.y + inner_size.y * 0.5;
+
+                let children_sizes =
+                    compute_children_sizes(children, start_pos, inner_size.y, 10.0, Sign::Negative);
+                children_sizes
+                    .iter()
+                    .map(|(key, size, pos)| LayoutOrTabInfo {
+                        key: key.clone(),
+                        size: vec2(inner_size.x, *size),
+                        position: vec2(position.x, *pos),
+                    })
+                    .collect()
+            }
         }
     }
+}
+
+enum Sign {
+    Positive,
+    Negative,
+}
+
+impl Sign {
+    pub fn as_f32(&self) -> f32 {
+        match self {
+            Sign::Positive => 1.0,
+            Sign::Negative => -1.0,
+        }
+    }
+}
+
+fn compute_children_sizes(
+    children: &Vec<DividedElement>,
+    start_pos: f32,
+    inner_size: f32,
+    margin: f32,
+    sign: Sign,
+) -> Vec<(LayoutOrTabKey, f32, f32)> {
+    let mut children_sizes = Vec::<(LayoutOrTabKey, f32, f32)>::new();
+    let total_size = children
+        .iter()
+        .fold(0.0, |acum: f32, div: &DividedElement| acum + div.size);
+
+    let mut start_pos = start_pos;
+    let gap_count = (children.len() as i32 - 1) as f32;
+    let children_available_size = inner_size - (margin * gap_count);
+
+    for child in children {
+        let element_proportion = child.size / total_size;
+        let child_size = children_available_size * element_proportion;
+        let child_position = start_pos + child_size * 0.5 * sign.as_f32();
+
+        children_sizes.push((
+            LayoutOrTabKey::LayoutKey(child.layout_key),
+            child_size,
+            child_position,
+        ));
+        start_pos += (child_size + margin) * sign.as_f32();
+    }
+    children_sizes
 }
 
 pub struct TabsContainer {
@@ -148,43 +234,36 @@ impl TabsContainer {
         event: &mut UIEvent,
         public_data: &PublicData,
         public_data_changes: &Option<&mut Vec<Box<dyn FnMut(&mut PublicData) -> ()>>>,
-        size: UVec2,
-        position: UVec2,
+        size: Vec2,
+        position: Vec2,
         gui_container_collection: &Slotmap<Box<dyn GUIContainer>>,
     ) -> GUIContainerInfo {
-        let active_tab_key = self.tabs[self.active_tab];
-        let offset = ((size.y as f32) * 0.75) as u32;
-        let container_position = uvec2(position.x, position.y - (offset as f32 * 0.5) as u32);
-        let container_size = uvec2(size.x, size.y - offset);
+        const TAB_SIZE: f32 = 30.0;
 
-        let tab_menu_size = uvec2(size.x, offset - ((size.y as f32) * 0.05) as u32);
-        let tab_menu_position = uvec2(
-            position.x,
-            position.y + ((size.y - offset) as f32 * 0.5) as u32,
-        );
+        let active_tab_key = self.tabs[self.active_tab];
+
+        let container_position = vec2(position.x, position.y - (TAB_SIZE * 0.5));
+        let container_size = vec2(size.x, size.y - TAB_SIZE);
+
+        let tab_menu_size = vec2(size.x, TAB_SIZE);
+        let tab_menu_position = vec2(position.x, position.y + (size.y - TAB_SIZE) * 0.5);
 
         match event {
             UIEvent::Render { gui_rects } => {
-                let mask_type = MaskType::Rect { border: None };
-                let coloring_type = ColoringType::Color(ExtraBufferData::NewData(RGBA::RED));
-                let rect_mask = RectMask {
-                    position: tab_menu_position,
-                    size: tab_menu_size,
-                };
-                create_new_rect_element(
-                    gui_rects,
-                    public_data
-                        .collection
-                        .get::<EngineData>()
-                        .unwrap()
-                        .screen_size,
-                    tab_menu_position,
-                    tab_menu_size,
-                    0.0,
-                    ExtraBufferData::NewData(rect_mask),
-                    &mask_type,
-                    &coloring_type,
-                );
+                let engine_data = public_data::utils::get_engine_data(public_data);
+                let screen_size = engine_data.screen_size;
+                let hue = lerp_f32(0.0, 360.0, engine_data.time.sin_time(0.25) * 0.5 + 0.5);
+                let color: RGBA = HSLA {
+                    h: hue,
+                    s: 0.75,
+                    l: 0.5,
+                    a: 1.0,
+                }
+                .into();
+
+                ElementBuilder::new(screen_size, tab_menu_position, tab_menu_size)
+                    .set_color(color.into())
+                    .build(gui_rects);
 
                 GUIContainerInfo {
                     key: active_tab_key,
@@ -201,34 +280,35 @@ impl TabsContainer {
     }
 }
 
-pub struct WindowLayout {
-    pub layout_key: LayoutElementSlotKey,
-    pub size: UVec2,
-    pub position: UVec2,
-}
-
 pub struct TabLayoutInfo {
-    key: TabsContainerSlotKey,
-    size: UVec2,
-    position: UVec2,
+    key: TabsSlotKey,
+    size: Vec2,
+    position: Vec2,
 }
-pub struct LayoutInfo {
-    key: LayoutElementSlotKey,
-    size: UVec2,
-    position: UVec2,
+#[derive(Clone, Copy)]
+pub enum LayoutOrTabKey {
+    TabKey(TabsSlotKey),
+    LayoutKey(LayoutSlotKey),
+}
+pub struct LayoutOrTabInfo {
+    key: LayoutOrTabKey,
+    size: Vec2,
+    position: Vec2,
 }
 pub struct GUIContainerInfo {
     key: GUIContainerSlotkey,
-    size: UVec2,
-    position: UVec2,
+    size: Vec2,
+    position: Vec2,
+}
+
+pub struct WindowLayout {
+    pub layout_key: LayoutSlotKey,
+    pub size: Vec2,
+    pub position: Vec2,
 }
 
 impl WindowLayout {
-    pub fn new_with_contianer(
-        layout_key: LayoutElementSlotKey,
-        size: UVec2,
-        position: UVec2,
-    ) -> Self {
+    pub fn new_with_contianer(layout_key: LayoutSlotKey, size: Vec2, position: Vec2) -> Self {
         Self {
             layout_key: layout_key,
             size,
@@ -236,18 +316,45 @@ impl WindowLayout {
         }
     }
 
-    pub fn handle_event(&mut self, event: &mut UIEvent, public_data: &PublicData) -> LayoutInfo {
+    pub fn handle_event(
+        &mut self,
+        event: &mut UIEvent,
+        public_data: &PublicData,
+    ) -> LayoutOrTabInfo {
+        let inner_size = self.size - vec2(20.0, 40.0);
+        let inner_position = self.position - vec2(0.0, 10.0);
+
         match event {
-            UIEvent::Render { gui_rects } => LayoutInfo {
-                key: self.layout_key,
-                size: (self.size.as_vec2() * 0.95).as_uvec2(),
-                position: self.position.clone(),
-            },
-            _ => LayoutInfo {
-                key: self.layout_key,
-                size: (self.size.as_vec2() * 0.95).as_uvec2(),
-                position: self.position.clone(),
-            },
+            UIEvent::Render { gui_rects } => {
+                let menu_bar_pos = self.position + vec2(0.0, self.size.y * 0.5 - 10.0);
+                let menu_bar_size = vec2(self.size.x, 20.0);
+
+                let color: RGBA = HSLA {
+                    h: get_engine_data(public_data).time.time * 10.0,
+                    s: get_engine_data(public_data).time.sin_time(10.0) * 0.5 + 0.5,
+                    l: 0.8,
+                    a: 1.0,
+                }
+                .into();
+
+                ElementBuilder::new(
+                    get_engine_data(public_data).screen_size,
+                    menu_bar_pos,
+                    menu_bar_size,
+                )
+                .set_color(color.into())
+                .build(gui_rects);
+            }
+            UIEvent::Resize(screen_size) => {
+                self.size = screen_size.as_vec2();
+                self.position = self.size * 0.5;
+            }
+            _ => {}
+        }
+        LayoutOrTabInfo {
+            key: LayoutOrTabKey::LayoutKey(self.layout_key),
+            size: inner_size,
+            position: inner_position,
         }
     }
 }
@@ -258,19 +365,6 @@ pub struct WindowLayouting {
     layout_elements_collection: Slotmap<LayoutElement>,
     window_collection: Slotmap<WindowLayout>,
     window_order: Vec<WindowSlotKey>,
-}
-
-fn from_layout_element_vec_into_divided_element_vec(
-    layout_elements: Vec<LayoutElementSlotKey>,
-) -> Vec<DividedElement> {
-    let mut div_element_vec = Vec::<DividedElement>::with_capacity(layout_elements.len());
-    for element in layout_elements {
-        div_element_vec.push(DividedElement {
-            layout_key: element,
-            size: 1.0,
-        });
-    }
-    div_element_vec
 }
 
 impl WindowLayouting {
@@ -284,17 +378,17 @@ impl WindowLayouting {
         }
     }
 
-    pub fn create_tab(&mut self, gui_container: Vec<GUIContainerSlotkey>) -> TabsContainerSlotKey {
+    pub fn create_tab(&mut self, gui_container: Vec<GUIContainerSlotkey>) -> TabsSlotKey {
         let t_container = TabsContainer::new(gui_container);
         let t_container_key = self.tabs_container_collection.push(t_container).unwrap();
-        TabsContainerSlotKey(t_container_key)
+        TabsSlotKey(t_container_key)
     }
 
     pub fn create_window(
         &mut self,
-        layout_key: LayoutElementSlotKey,
-        size: UVec2,
-        position: UVec2,
+        layout_key: LayoutSlotKey,
+        size: Vec2,
+        position: Vec2,
     ) -> WindowSlotKey {
         let window_layout = WindowLayout::new_with_contianer(layout_key, size, position);
         let window_key = WindowSlotKey(self.window_collection.push(window_layout).unwrap());
@@ -305,26 +399,23 @@ impl WindowLayouting {
     pub fn create_vertical_layout_element(
         &mut self,
         children: Vec<DividedElement>,
-    ) -> Option<LayoutElementSlotKey> {
+    ) -> Option<LayoutSlotKey> {
         LayoutElement::create_vertical(children, &mut self.layout_elements_collection)
     }
 
     pub fn create_horizontal_layout_element(
         &mut self,
         children: Vec<DividedElement>,
-    ) -> Option<LayoutElementSlotKey> {
+    ) -> Option<LayoutSlotKey> {
         LayoutElement::create_horizontal(children, &mut self.layout_elements_collection)
     }
 
-    pub fn create_single_layout_element(
-        &mut self,
-        tab_key: TabsContainerSlotKey,
-    ) -> Option<LayoutElementSlotKey> {
+    pub fn create_single_layout_element(&mut self, tab_key: TabsSlotKey) -> Option<LayoutSlotKey> {
         match self
             .layout_elements_collection
             .push(LayoutElement::Single(tab_key))
         {
-            Some(key) => Some(LayoutElementSlotKey(key)),
+            Some(key) => Some(LayoutSlotKey(key)),
             None => None,
         }
     }
@@ -349,34 +440,35 @@ impl WindowLayouting {
         for window_key in &self.window_order {
             match self.window_collection.get_value_mut(&window_key.0) {
                 Some(window_mut) => {
+                    // Should only contain tabs!
                     let mut tab_handle_stack = Vec::<TabLayoutInfo>::new();
-                    let mut layout_handle_stack = Vec::<LayoutInfo>::new();
+                    // Should only contain tabs!
+                    let mut layout_handle_stack = Vec::<LayoutOrTabInfo>::new();
+
                     layout_handle_stack.push(window_mut.handle_event(event, public_data));
                     loop {
                         match layout_handle_stack.pop() {
-                            Some(layout_handle) => {
-                                let layout_element = self
-                                    .layout_elements_collection
-                                    .get_value_mut(&layout_handle.key.0)
-                                    .unwrap();
-                                match layout_element {
-                                    LayoutElement::Single(tab) => {
-                                        tab_handle_stack.push(TabLayoutInfo {
-                                            key: tab.clone(),
-                                            size: layout_handle.size,
-                                            position: layout_handle.position,
-                                        });
-                                    }
-                                    _ => {
-                                        let layout_handlers = layout_element.handle_event(
+                            Some(layout_handle) => match layout_handle.key {
+                                LayoutOrTabKey::TabKey(tab_key) => {
+                                    tab_handle_stack.push(TabLayoutInfo {
+                                        key: tab_key,
+                                        size: layout_handle.size,
+                                        position: layout_handle.position,
+                                    });
+                                }
+                                LayoutOrTabKey::LayoutKey(layout_key) => {
+                                    let children = self
+                                        .layout_elements_collection
+                                        .get_value_mut(&layout_key)
+                                        .unwrap()
+                                        .handle_event(
                                             event,
                                             layout_handle.size,
                                             layout_handle.position,
                                         );
-                                        layout_handle_stack.extend(layout_handlers);
-                                    }
+                                    layout_handle_stack.extend(children);
                                 }
-                            }
+                            },
                             None => break,
                         }
                     }
@@ -390,7 +482,7 @@ impl WindowLayouting {
                     for tab in tab_handle_stack.drain(..) {
                         let tab_container = self
                             .tabs_container_collection
-                            .get_value_mut(&tab.key.0)
+                            .get_value_mut(&tab.key)
                             .unwrap();
 
                         let gui_container_info = tab_container.handle_event(
