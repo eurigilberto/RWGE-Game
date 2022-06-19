@@ -17,7 +17,7 @@ use rwge::{
     render_system::copy_texture_to_surface::CopyTextureToSurface,
     render_system::{render_texture::RenderTexture, RenderSystem},
     slotmap::slotmap::{SlotKey, Slotmap},
-    Engine,
+    Engine, winit::{window::{Window, Fullscreen}, monitor::VideoMode},
 };
 mod anymap;
 mod as_any;
@@ -27,8 +27,7 @@ struct Game {
     gui_copy_texture_surface: CopyTextureToSurface,
     gui_system: GUISystem,
     public_data: PublicData,
-    public_data_changes: Vec<Box<dyn FnMut(&mut PublicData) -> ()>>,
-    font_atlas_collection: Vec<FontAtlas>,
+    font_atlas_collection: Vec<FontAtlas>
 }
 
 fn create_gui_copy_texture_to_surface(
@@ -45,7 +44,7 @@ fn create_gui_copy_texture_to_surface(
 }
 
 impl Game {
-    fn new(engine: &Engine) -> Self {
+    fn new(engine: &Engine, window: Window) -> Self {
         let size = engine.render_system.render_window.size.clone();
 
         let mut render_texture_slotmap = Slotmap::<RenderTexture>::new_with_capacity(10);
@@ -64,23 +63,24 @@ impl Game {
         let engine_data = EngineData::new_from_engine(engine);
         public_data.collection.insert(engine_data);
 
+        public_data.collection.insert(window);
+
         let font_atlas_collection = write_font_to_gpu(engine, &gui_rects);
         let gui_copy_texture_surface =
             create_gui_copy_texture_to_surface(&mut public_data, &gui_rects, engine);
 
-        let public_data_changes = Vec::<Box<dyn FnMut(&mut PublicData) -> ()>>::with_capacity(50);
         Self {
             gui_rects,
             gui_system,
             public_data,
-            public_data_changes,
             gui_copy_texture_surface,
-            font_atlas_collection,
+            font_atlas_collection
         }
     }
 }
 
 impl rwge::Runtime for Game {
+    
     fn frame_start(&mut self, engine: &Engine) {
         public_data::utils::update_engine_time(&mut self.public_data, &engine.time);
     }
@@ -115,14 +115,11 @@ impl rwge::Runtime for Game {
                         .update_texture_view(&gui_color_rt.texture_view, &engine.render_system);
                     engine.render_system.render_window.resize(new_size);
 
-                    
                     let mut resize_ui_event = UIEvent::Resize(new_size);
                     self.gui_system.handle_event(
                         &mut resize_ui_event,
                         &mut self.public_data,
-                        &Some(&mut self.public_data_changes),
                     );
-                    
                 } else {
                     let gui_event = rwge::gui::rect_ui::event::default_event_transformation(
                         event,
@@ -132,7 +129,6 @@ impl rwge::Runtime for Game {
                         self.gui_system.handle_event(
                             &mut e,
                             &mut self.public_data,
-                            &Some(&mut self.public_data_changes),
                         );
                     }
                 }
@@ -140,8 +136,8 @@ impl rwge::Runtime for Game {
         }
     }
 
-    fn update(&mut self, engine: &rwge::Engine) {
-        self.gui_system.update(&mut self.public_data);
+    fn update(&mut self, engine: &rwge::Engine, exit_event_loop: &mut dyn FnMut() -> ()) {
+        self.gui_system.update(&self.public_data);
     }
 
     fn render(
@@ -150,6 +146,8 @@ impl rwge::Runtime for Game {
         screen_view: &rwge::wgpu::TextureView,
         encoder: &mut rwge::wgpu::CommandEncoder,
     ) {
+        ///////// APPLY PUBLIC DATA CHANGES
+        self.public_data.apply_mut();
         ///////// APPLY PUBLIC DATA CHANGES
 
         rwge::render_system::texture::clear_render_targets(
@@ -166,7 +164,6 @@ impl rwge::Runtime for Game {
             &mut self.gui_rects,
             encoder,
             &mut self.public_data,
-            &self.font_atlas_collection,
         );
 
         self.gui_copy_texture_surface.render(encoder, screen_view);
@@ -182,12 +179,24 @@ impl rwge::Runtime for Game {
     fn before_exit(&mut self, engine: &rwge::Engine) {
         println!("Before exit log")
     }
+
+    fn get_window_id(&self)->rwge::winit::window::WindowId {
+        self.public_data.collection.get::<rwge::winit::window::Window>().unwrap().id()
+    }
 }
 
 fn main() {
-    let (engine, event_loop) = rwge::create_engine(950, 600, "Game A");
+    let event_loop = rwge::winit::event_loop::EventLoop::new();
+    
+    let window = rwge::winit::window::WindowBuilder::new()
+        .with_inner_size(rwge::winit::dpi::LogicalSize::<f32>::new(960.0, 520.0))
+        .with_decorations(false).with_resizable(true)
+        .build(&event_loop)
+        .expect("Window could not be created");
 
-    let game = Game::new(&engine);
+    let engine = Engine::new(&window);
+
+    let game = Game::new(&engine, window);
 
     rwge::start_engine_loop(engine, game, event_loop);
 }

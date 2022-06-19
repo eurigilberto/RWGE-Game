@@ -6,9 +6,16 @@ use std::any::{Any, TypeId};
 mod gui_container;
 mod window_layout;
 
+#[derive(Copy, Clone)]
+pub struct ContainerInfo{
+    position: Vec2,
+    size: Vec2,
+    //Maybe more in the future
+}
+
 use rwge::{
     font::font_atlas::FontAtlas,
-    glam::{uvec2, UVec2},
+    glam::{uvec2, UVec2, Vec2},
     gui::rect_ui::{
         element::{create_new_rect_element, ColoringType, MaskType},
         event::UIEvent,
@@ -58,7 +65,7 @@ impl GUISystem {
         let c3_key = window_layouting
             .push_gui_container(Box::new(ContainerOne {
                 name: String::from("Wind C3"),
-                value: 0.75,
+                value: 1.0,
                 cound: 7,
             }))
             .unwrap();
@@ -154,7 +161,6 @@ impl GUISystem {
         &mut self,
         event: &mut UIEvent,
         public_data: &mut PublicData,
-        public_data_changes: &Option<&mut Vec<Box<dyn FnMut(&mut PublicData) -> ()>>>,
     ) {
         // Handle Any event FGUI
         match event {
@@ -163,11 +169,13 @@ impl GUISystem {
             },
             _=>{}
         }
-        self.window_layouting.handle_event(event, public_data_changes, public_data)
+        self.window_layouting.handle_event(event, public_data)
     }
 
-    pub fn update(&mut self, public_data: &mut PublicData) {
+    pub fn update(&mut self, public_data: &PublicData) {
         /* Nothing yet - The UIEvent to be sent to the GUI containers is going to be created here */
+        let mut event = UIEvent::Update;
+        self.window_layouting.handle_event(&mut event, public_data)
     }
 
     pub fn resize(&mut self, new_size: UVec2) {
@@ -179,20 +187,20 @@ impl GUISystem {
         engine: &Engine,
         gui_rects: &mut GUIRects,
         encoder: &mut rwge::wgpu::CommandEncoder,
-        public_data: &mut PublicData,
-        font_atlas_collection: &Vec<FontAtlas>,
+        public_data: &mut PublicData
     ) {
+
         gui_rects.rect_collection.clear_buffers();
 
         {
             let mut event = UIEvent::Render { gui_rects };
-            self.window_layouting.handle_event(&mut event, &None, public_data);
-            test_screen(
+            self.window_layouting.handle_event(&mut event, public_data);
+            /*test_screen(
                 &get_engine_data(public_data).time,
                 gui_rects,
                 font_atlas_collection,
                 self.screen_size,
-            );
+            );*/
         }
 
         gui_rects

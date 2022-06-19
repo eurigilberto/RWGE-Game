@@ -1,14 +1,14 @@
 use rwge::{
     color::RGBA,
     gui::rect_ui::{
-        element::{create_new_rect_element, ColoringType, MaskType, builder::ElementBuilder},
+        element::{builder::ElementBuilder},
         event::UIEvent,
         BorderRadius, ExtraBufferData, RectMask,
     },
     Engine, glam::{UVec2, Vec2},
 };
 
-use crate::public_data::{PublicData, EngineData, self};
+use crate::{public_data::{PublicData, EngineData, self}, gui_system::ContainerInfo};
 
 use super::GUIContainer;
 
@@ -26,11 +26,12 @@ impl GUIContainer for ContainerOne {
     fn handle_event(
         &mut self,
         event: &mut UIEvent,
-        public_data_changes: &Option<&mut Vec<Box<dyn FnMut(&mut PublicData) -> ()>>>,
         public_data: &PublicData,
-        size: Vec2, position: Vec2
+        container_info: ContainerInfo
     ) {
         //test
+        let position = container_info.position;
+        let size = container_info.size;
         match event {
             UIEvent::Render {
                 gui_rects,
@@ -45,6 +46,15 @@ impl GUIContainer for ContainerOne {
                     position: position,
                     size: size,
                 }.into()).build(gui_rects);
+
+                // Grid component?
+
+
+
+                /* ElementBuilder::new(screen_size, vec2(10.0, 10.0), vec2(10.0, 10.0))
+        .set_color(RGBA::GREEN.into())
+        .build(gui_rects); */
+
             }
             _ => {}
         }
