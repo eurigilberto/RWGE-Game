@@ -17,7 +17,7 @@ use rwge::{
 
 use crate::public_data::{PublicData};
 
-use super::{gui_container::GUIContainer, ContainerInfo};
+use super::{gui_container::GUIContainer, ContainerInfo, control::{ControlState}};
 
 rwge::create_custom_key!(
     GUIContainerSlotkey;
@@ -55,15 +55,16 @@ pub struct GUIContainerInfo {
     container_info: ContainerInfo
 }
 
-pub struct WindowLayouting {
+pub struct WindowSystem {
     gui_contianer_collection: Slotmap<Box<dyn GUIContainer>>,
     tabs_container_collection: Slotmap<TabsContainer>,
     layout_elements_collection: Slotmap<LayoutElement>,
     window_collection: Slotmap<Window>,
     window_order: Vec<WindowSlotKey>,
+    control_state: ControlState
 }
 
-impl WindowLayouting {
+impl WindowSystem {
     pub fn new() -> Self {
         Self {
             gui_contianer_collection: Slotmap::<Box<dyn GUIContainer>>::new_with_capacity(20),
@@ -71,6 +72,7 @@ impl WindowLayouting {
             layout_elements_collection: Slotmap::<LayoutElement>::new_with_capacity(10),
             window_collection: Slotmap::<Window>::new_with_capacity(5),
             window_order: Vec::<WindowSlotKey>::with_capacity(5),
+            control_state: ControlState::new()
         }
     }
 
@@ -132,6 +134,11 @@ impl WindowLayouting {
         event: &mut UIEvent,
         public_data: &PublicData,
     ) {
+        self.control_state.on_gui_start();
+        if let UIEvent::MouseMove { corrected, .. } = event{
+            self.control_state.last_cursor_position = corrected.data;
+        }
+
         for window_key in &self.window_order {
             match self.window_collection.get_value_mut(&window_key.0) {
                 Some(window_mut) => {
@@ -140,7 +147,7 @@ impl WindowLayouting {
                     // Should only contain tabs!
                     let mut layout_handle_stack = Vec::<LayoutOrTabInfo>::new();
 
-                    layout_handle_stack.push(window_mut.handle_event(event, public_data));
+                    layout_handle_stack.push(window_mut.handle_event(event, public_data, &mut self.control_state));
                     loop {
                         match layout_handle_stack.pop() {
                             Some(layout_handle) => match layout_handle.key {
@@ -157,7 +164,8 @@ impl WindowLayouting {
                                         .unwrap()
                                         .handle_event(
                                             event,
-                                            layout_handle.container_info
+                                            layout_handle.container_info,
+                                            &mut self.control_state
                                         );
                                     layout_handle_stack.extend(children);
                                 }
@@ -181,6 +189,7 @@ impl WindowLayouting {
                             public_data,
                             tab.container_info,
                             &self.gui_contianer_collection,
+                            &mut self.control_state
                         );
 
                         let gui_container = self
@@ -190,7 +199,8 @@ impl WindowLayouting {
                         gui_container.handle_event(
                             event,
                             public_data,
-                            gui_container_info.container_info
+                            gui_container_info.container_info,
+                            &mut self.control_state
                         );
                     }
                 }
@@ -198,6 +208,15 @@ impl WindowLayouting {
                     // Window does not exist you need to
                 }
             }
+        }
+        self.control_state.on_gui_end();
+
+        if let UIEvent::CursorExit = event {
+            self.control_state.on_cursor_exit();
+        }
+
+        if let UIEvent::Update = event {
+            self.control_state.on_frame_end();
         }
     }
 }

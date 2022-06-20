@@ -8,7 +8,7 @@ use rwge::{
     Engine, glam::{UVec2, Vec2},
 };
 
-use crate::{public_data::{PublicData, EngineData, self}, gui_system::ContainerInfo};
+use crate::{public_data::{PublicData, EngineData, self}, gui_system::{ContainerInfo, control::ControlState}};
 
 use super::GUIContainer;
 
@@ -27,7 +27,8 @@ impl GUIContainer for ContainerOne {
         &mut self,
         event: &mut UIEvent,
         public_data: &PublicData,
-        container_info: ContainerInfo
+        container_info: ContainerInfo,
+        control_state: &mut ControlState
     ) {
         //test
         let position = container_info.position;

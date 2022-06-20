@@ -5,6 +5,7 @@ use std::any::{Any, TypeId};
 
 mod gui_container;
 mod window_layout;
+mod control;
 
 #[derive(Copy, Clone)]
 pub struct ContainerInfo{
@@ -14,12 +15,10 @@ pub struct ContainerInfo{
 }
 
 use rwge::{
-    font::font_atlas::FontAtlas,
     glam::{uvec2, UVec2, Vec2},
     gui::rect_ui::{
         element::{create_new_rect_element, ColoringType, MaskType},
         event::UIEvent,
-        graphic::RectGraphic,
         GUIRects,
     },
     slotmap::slotmap::Slotmap,
@@ -30,12 +29,12 @@ use crate::public_data::{utils::{get_render_texture, get_engine_data}, PublicDat
 
 use self::{
     gui_container::{container_one::ContainerOne, GUIContainer},
-    window_layout::{DividedElement, GUIContainerSlotkey, WindowLayouting},
+    window_layout::{DividedElement, GUIContainerSlotkey, WindowSystem},
 };
 
 /// This version of the window system is only going to work with windowed spaces. This needs to be refactored in the future to support docking.
 pub struct GUISystem {
-    pub window_layouting: WindowLayouting,
+    pub window_layouting: WindowSystem,
     pub container_collection: Slotmap<Box<dyn GUIContainer>>,
     pub screen_size: UVec2,
 }
@@ -44,7 +43,7 @@ impl GUISystem {
     pub fn new(screen_size: UVec2) -> Self {
         let mut container_collection = Slotmap::<Box<dyn GUIContainer>>::new_with_capacity(20);
 
-        let mut window_layouting = WindowLayouting::new();
+        let mut window_layouting = WindowSystem::new();
 
         let c1_key = window_layouting
             .push_gui_container(Box::new(ContainerOne {

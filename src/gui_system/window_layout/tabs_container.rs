@@ -1,6 +1,6 @@
 use rwge::{glam::{vec2, Vec2}, math_utils::lerp_f32, color::{RGBA, HSLA}, gui::rect_ui::{event::UIEvent, element::builder::ElementBuilder}, slotmap::slotmap::Slotmap};
 
-use crate::{public_data::{self, PublicData, EngineData}, gui_system::{gui_container::GUIContainer, ContainerInfo}};
+use crate::{public_data::{self, PublicData, EngineData}, gui_system::{gui_container::GUIContainer, ContainerInfo, control::ControlState}};
 
 use super::{GUIContainerSlotkey, GUIContainerInfo};
 
@@ -29,6 +29,7 @@ impl TabsContainer {
         public_data: &PublicData,
         container_info: ContainerInfo,
         gui_container_collection: &Slotmap<Box<dyn GUIContainer>>,
+        control_state: &mut ControlState
     ) -> GUIContainerInfo {
         const TAB_SIZE: f32 = 30.0;
 

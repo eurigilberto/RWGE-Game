@@ -6,7 +6,7 @@ use rwge::{glam::{UVec2, Vec2}, gui::rect_ui::event::UIEvent, Engine};
 
 use crate::{as_any::AsAny, public_data::{PublicData}};
 
-use super::ContainerInfo;
+use super::{ContainerInfo, control::ControlState};
 
 pub trait GUIContainer: AsAny {
     fn get_name(&self) -> &str;
@@ -14,7 +14,8 @@ pub trait GUIContainer: AsAny {
         &mut self,
         event: &mut UIEvent,
         public_data: &PublicData,
-        container_info: ContainerInfo 
+        container_info: ContainerInfo,
+        control_state: &mut ControlState
     );
 }
 

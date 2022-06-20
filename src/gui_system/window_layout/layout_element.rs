@@ -4,7 +4,7 @@ use rwge::{
     slotmap::slotmap::Slotmap,
 };
 
-use crate::gui_system::ContainerInfo;
+use crate::gui_system::{ContainerInfo, control::ControlState};
 
 use super::{DividedElement, LayoutOrTabInfo, LayoutOrTabKey, LayoutSlotKey, TabsSlotKey};
 
@@ -90,6 +90,7 @@ impl LayoutElement {
         &mut self,
         event: &mut UIEvent,
         container_info: ContainerInfo,
+        control_state: &mut ControlState
     ) -> Vec<LayoutOrTabInfo> {
         let size = container_info.size;
         let position = container_info.position;
