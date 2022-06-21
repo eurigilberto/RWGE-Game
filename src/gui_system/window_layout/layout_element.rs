@@ -107,10 +107,10 @@ impl LayoutElement {
             LayoutElement::Horizontal(children) => {
                 let margin: f32 = 10.0;
                 let inner_size = size;
-                let start_pos = position.x - f32::ceil(inner_size.x * 0.5);
+                let start_pos = position.x - inner_size.x * 0.5;
 
                 let children_sizes =
-                    compute_children_sizes(children, start_pos, inner_size.x, 10.0, Sign::Positive);
+                    compute_children_sizes(children, start_pos, inner_size.x, 5.0, Sign::Positive);
                 children_sizes
                     .iter()
                     .map(|(key, size, pos)| LayoutOrTabInfo {
@@ -125,10 +125,10 @@ impl LayoutElement {
             LayoutElement::Vertical(children) => {
                 let margin: f32 = 10.0;
                 let inner_size = size;
-                let start_pos = position.y + f32::ceil(inner_size.y * 0.5);
+                let start_pos = position.y + inner_size.y * 0.5;
 
                 let children_sizes =
-                    compute_children_sizes(children, start_pos, inner_size.y, 10.0, Sign::Negative);
+                    compute_children_sizes(children, start_pos, inner_size.y, 5.0, Sign::Negative);
                 children_sizes
                     .iter()
                     .map(|(key, size, pos)| LayoutOrTabInfo {

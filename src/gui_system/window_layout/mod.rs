@@ -8,16 +8,14 @@ use window::Window;
 
 //For now the style of the tabs is going to be fixed
 use rwge::{
-    glam::{Vec2},
-    gui::rect_ui::{
-        event::UIEvent,
-    },
+    glam::Vec2,
+    gui::rect_ui::{event::UIEvent, element::builder::ElementBuilder, GUIRects},
     slotmap::slotmap::{SlotKey, Slotmap},
 };
 
-use crate::public_data::{PublicData};
+use crate::public_data::PublicData;
 
-use super::{gui_container::GUIContainer, ContainerInfo, control::{ControlState}};
+use super::{control::ControlState, gui_container::GUIContainer, ContainerInfo};
 
 rwge::create_custom_key!(
     GUIContainerSlotkey;
@@ -39,7 +37,7 @@ pub struct DividedElement {
 
 pub struct TabLayoutInfo {
     key: TabsSlotKey,
-    container_info: ContainerInfo
+    container_info: ContainerInfo,
 }
 #[derive(Clone, Copy)]
 pub enum LayoutOrTabKey {
@@ -48,11 +46,11 @@ pub enum LayoutOrTabKey {
 }
 pub struct LayoutOrTabInfo {
     key: LayoutOrTabKey,
-    container_info: ContainerInfo
+    container_info: ContainerInfo,
 }
 pub struct GUIContainerInfo {
     key: GUIContainerSlotkey,
-    container_info: ContainerInfo
+    container_info: ContainerInfo,
 }
 
 pub struct WindowSystem {
@@ -61,7 +59,7 @@ pub struct WindowSystem {
     layout_elements_collection: Slotmap<LayoutElement>,
     window_collection: Slotmap<Window>,
     window_order: Vec<WindowSlotKey>,
-    control_state: ControlState
+    control_state: ControlState,
 }
 
 impl WindowSystem {
@@ -72,7 +70,7 @@ impl WindowSystem {
             layout_elements_collection: Slotmap::<LayoutElement>::new_with_capacity(10),
             window_collection: Slotmap::<Window>::new_with_capacity(5),
             window_order: Vec::<WindowSlotKey>::with_capacity(5),
-            control_state: ControlState::new()
+            control_state: ControlState::new(),
         }
     }
 
@@ -129,32 +127,31 @@ impl WindowSystem {
         }
     }
 
-    pub fn handle_event(
-        &mut self,
-        event: &mut UIEvent,
-        public_data: &PublicData,
-    ) {
+    pub fn handle_event(&mut self, event: &mut UIEvent, public_data: &PublicData) {
         self.control_state.on_gui_start();
-        if let UIEvent::MouseMove { corrected, .. } = event{
+        if let UIEvent::MouseMove { corrected, .. } = event {
             self.control_state.last_cursor_position = corrected.data;
         }
 
+        let mut extra_elements = Vec::<(Box<dyn FnOnce(&mut GUIRects)->()>, u32)>::with_capacity(100);
         for window_key in &self.window_order {
             match self.window_collection.get_value_mut(&window_key.0) {
                 Some(window_mut) => {
-                    // Should only contain tabs!
                     let mut tab_handle_stack = Vec::<TabLayoutInfo>::new();
-                    // Should only contain tabs!
                     let mut layout_handle_stack = Vec::<LayoutOrTabInfo>::new();
 
-                    layout_handle_stack.push(window_mut.handle_event(event, public_data, &mut self.control_state));
+                    layout_handle_stack.push(window_mut.handle_event(
+                        event,
+                        public_data,
+                        &mut self.control_state,
+                    ));
                     loop {
                         match layout_handle_stack.pop() {
                             Some(layout_handle) => match layout_handle.key {
                                 LayoutOrTabKey::TabKey(tab_key) => {
                                     tab_handle_stack.push(TabLayoutInfo {
                                         key: tab_key,
-                                        container_info: layout_handle.container_info
+                                        container_info: layout_handle.container_info,
                                     });
                                 }
                                 LayoutOrTabKey::LayoutKey(layout_key) => {
@@ -165,7 +162,8 @@ impl WindowSystem {
                                         .handle_event(
                                             event,
                                             layout_handle.container_info,
-                                            &mut self.control_state
+                                            &mut self.control_state,
+                                            
                                         );
                                     layout_handle_stack.extend(children);
                                 }
@@ -183,13 +181,13 @@ impl WindowSystem {
                             .tabs_container_collection
                             .get_value_mut(&tab.key)
                             .unwrap();
-                        
+
                         let gui_container_info = tab_container.handle_event(
                             event,
                             public_data,
                             tab.container_info,
                             &self.gui_contianer_collection,
-                            &mut self.control_state
+                            &mut self.control_state,
                         );
 
                         let gui_container = self
@@ -200,13 +198,11 @@ impl WindowSystem {
                             event,
                             public_data,
                             gui_container_info.container_info,
-                            &mut self.control_state
+                            &mut self.control_state,
                         );
                     }
                 }
-                None => {
-                    // Window does not exist you need to
-                }
+                None => { /* No op */ }
             }
         }
         self.control_state.on_gui_end();

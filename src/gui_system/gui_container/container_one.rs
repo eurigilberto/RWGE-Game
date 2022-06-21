@@ -38,12 +38,7 @@ impl GUIContainer for ContainerOne {
                 gui_rects,
             } => {
                 let screen_size = public_data::utils::get_engine_data(public_data).screen_size;
-                ElementBuilder::new(screen_size, position, size).set_color(RGBA {
-                    r: 0.2,
-                    g: self.value,
-                    b: 0.75,
-                    a: 1.0,
-                }.into()).set_rect_mask(RectMask {
+                ElementBuilder::new(screen_size, position, size).set_color(RGBA::rrr1(0.55).into()).set_rect_mask(RectMask {
                     position: position,
                     size: size,
                 }.into()).build(gui_rects);

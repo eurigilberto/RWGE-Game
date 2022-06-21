@@ -1,4 +1,4 @@
-use std::num::NonZeroU32;
+use std::{num::NonZeroU32, collections::VecDeque};
 mod gui_font;
 mod public_data;
 use gui_font::write_font_to_gpu;
@@ -87,7 +87,7 @@ impl rwge::Runtime for Game {
 
     fn handle_event_queue<F>(
         &mut self,
-        event_queue: &Vec<rwge::EngineEvent>,
+        event_queue: &VecDeque<rwge::EngineEvent>,
         engine: &mut Engine,
         exit_event_loop: &mut F,
     ) where
@@ -153,7 +153,7 @@ impl rwge::Runtime for Game {
         rwge::render_system::texture::clear_render_targets(
             encoder,
             screen_view,
-            RGBA::BLACK.into(),
+            RGBA::rrr1( (0.12 as f32).powf(2.2)).into(),
             None,
             None,
             None,
@@ -191,6 +191,7 @@ fn main() {
     let window = rwge::winit::window::WindowBuilder::new()
         .with_inner_size(rwge::winit::dpi::LogicalSize::<f32>::new(960.0, 520.0))
         .with_decorations(false).with_resizable(true)
+        //.with_transparent(true)
         .build(&event_loop)
         .expect("Window could not be created");
 

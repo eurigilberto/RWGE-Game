@@ -20,6 +20,9 @@ use rwge::gui::rect_ui::event::UIEvent;
 use rwge::gui::rect_ui::RectMask;
 use rwge::uuid::Uuid;
 
+pub mod drag_element;
+pub mod main_window_top_bar;
+
 pub struct ControlState {
     current_ui_id: Option<Uiid>,
 

@@ -188,20 +188,16 @@ impl GUISystem {
         encoder: &mut rwge::wgpu::CommandEncoder,
         public_data: &mut PublicData
     ) {
-
         gui_rects.rect_collection.clear_buffers();
-
         {
             let mut event = UIEvent::Render { gui_rects };
             self.window_layouting.handle_event(&mut event, public_data);
             /*test_screen(
                 &get_engine_data(public_data).time,
                 gui_rects,
-                font_atlas_collection,
                 self.screen_size,
             );*/
         }
-
         gui_rects
             .rect_collection
             .update_gpu_buffers(&engine.render_system);
