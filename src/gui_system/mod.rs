@@ -1,7 +1,7 @@
 mod testing_structure;
 use testing_structure::test_screen;
 
-use std::any::{Any, TypeId};
+use std::{any::{Any, TypeId}, ops::Range};
 
 mod gui_container;
 mod window_layout;
@@ -11,6 +11,7 @@ mod control;
 pub struct ContainerInfo{
     position: Vec2,
     size: Vec2,
+    depth_range: (u32, u32)
     //Maybe more in the future
 }
 
@@ -70,7 +71,7 @@ impl GUISystem {
             .unwrap();
 
         let tab_1 = window_layouting.create_tab(vec![c1_key, c2_key]);
-        let tab_2 = window_layouting.create_tab(vec![c2_key, c3_key]);
+        let tab_2 = window_layouting.create_tab(vec![c2_key, c3_key, c1_key]);
         let tab_3 = window_layouting.create_tab(vec![c3_key]);
 
         let single_1 = window_layouting
@@ -190,8 +191,7 @@ impl GUISystem {
     ) {
         gui_rects.rect_collection.clear_buffers();
         {
-            let mut event = UIEvent::Render { gui_rects };
-            self.window_layouting.handle_event(&mut event, public_data);
+            self.window_layouting.render_event(public_data, gui_rects);
             /*test_screen(
                 &get_engine_data(public_data).time,
                 gui_rects,

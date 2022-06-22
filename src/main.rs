@@ -173,6 +173,7 @@ impl rwge::Runtime for Game {
     where
         F: FnMut() -> (),
     {
+        self.gui_system.window_layouting.control_state.on_frame_end();
         engine.render_system.destroy_queued_textures();
     }
 

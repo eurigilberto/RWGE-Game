@@ -1,14 +1,16 @@
 use rwge::{
     color::RGBA,
+    glam::{UVec2, Vec2},
     gui::rect_ui::{
-        element::{builder::ElementBuilder},
-        event::UIEvent,
-        BorderRadius, ExtraBufferData, RectMask,
+        element::builder::ElementBuilder, event::UIEvent, BorderRadius, ExtraBufferData, RectMask,
     },
-    Engine, glam::{UVec2, Vec2},
+    Engine,
 };
 
-use crate::{public_data::{PublicData, EngineData, self}, gui_system::{ContainerInfo, control::ControlState}};
+use crate::{
+    gui_system::{control::ControlState, ContainerInfo},
+    public_data::{self, EngineData, PublicData},
+};
 
 use super::GUIContainer;
 
@@ -28,29 +30,29 @@ impl GUIContainer for ContainerOne {
         event: &mut UIEvent,
         public_data: &PublicData,
         container_info: ContainerInfo,
-        control_state: &mut ControlState
+        control_state: &mut ControlState,
     ) {
         //test
         let position = container_info.position;
         let size = container_info.size;
         match event {
-            UIEvent::Render {
-                gui_rects,
-            } => {
-                let screen_size = public_data::utils::get_engine_data(public_data).screen_size;
-                ElementBuilder::new(screen_size, position, size).set_color(RGBA::rrr1(0.55).into()).set_rect_mask(RectMask {
-                    position: position,
-                    size: size,
-                }.into()).build(gui_rects);
+            UIEvent::Render { gui_rects, .. } => {
+                ElementBuilder::new( position, size)
+                    .set_color(RGBA::rrr1(0.55).into())
+                    .set_rect_mask(
+                        RectMask {
+                            position: position,
+                            size: size,
+                        }
+                        .into(),
+                    )
+                    .build(gui_rects);
 
                 // Grid component?
 
-
-
                 /* ElementBuilder::new(screen_size, vec2(10.0, 10.0), vec2(10.0, 10.0))
-        .set_color(RGBA::GREEN.into())
-        .build(gui_rects); */
-
+                .set_color(RGBA::GREEN.into())
+                .build(gui_rects); */
             }
             _ => {}
         }

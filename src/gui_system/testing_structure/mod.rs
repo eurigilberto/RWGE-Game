@@ -15,15 +15,15 @@ use rwge::{
 use crate::public_data::EngineTimeData;
 
 pub fn test_screen(time: &EngineTimeData, gui_rects: &mut GUIRects, screen_size: UVec2) {
-    ElementBuilder::new(screen_size, vec2(10.0, 10.0), vec2(10.0, 10.0))
+    ElementBuilder::new(vec2(10.0, 10.0), vec2(10.0, 10.0))
         .set_color(RGBA::GREEN.into())
         .build(gui_rects);
 
-    ElementBuilder::new(screen_size, vec2(100.0, 100.0), vec2(50.0, 50.0))
+    ElementBuilder::new(vec2(100.0, 100.0), vec2(50.0, 50.0))
         .set_color(RGBA::RED.into())
         .build(gui_rects);
 
-    ElementBuilder::new(screen_size, vec2(100.0, 200.0), vec2(50.0, 50.0))
+    ElementBuilder::new(vec2(100.0, 200.0), vec2(50.0, 50.0))
         .set_color(RGBA::BLUE.into())
         .set_round_rect(
             BorderRadius::ForCorners {
@@ -37,13 +37,13 @@ pub fn test_screen(time: &EngineTimeData, gui_rects: &mut GUIRects, screen_size:
         .build(gui_rects);
 
     {
-        ElementBuilder::new(screen_size, vec2(100.0, 300.0), vec2(70.0, 70.0))
+        ElementBuilder::new(vec2(100.0, 300.0), vec2(70.0, 70.0))
             .set_color(RGBA::BLUE.into())
             .set_round_rect(BorderRadius::ForAll(10.0).into())
             .build(gui_rects);
 
         {
-            ElementBuilder::new(screen_size, vec2(600.0, 120.0), vec2(60.0, 60.0))
+            ElementBuilder::new(vec2(600.0, 120.0), vec2(60.0, 60.0))
                 .set_color(RGBA::RED.into())
                 .set_round_rect(BorderRadius::ForAll(10.0).into())
                 .set_border(Some(Border {
@@ -52,7 +52,7 @@ pub fn test_screen(time: &EngineTimeData, gui_rects: &mut GUIRects, screen_size:
                 }))
                 .build(gui_rects);
 
-            ElementBuilder::new(screen_size, vec2(675.0, 120.0), vec2(60.0, 60.0))
+            ElementBuilder::new(vec2(675.0, 120.0), vec2(60.0, 60.0))
                 .set_color(RGBA::RED.into())
                 .set_circle()
                 .set_border(Some(Border {
@@ -61,7 +61,7 @@ pub fn test_screen(time: &EngineTimeData, gui_rects: &mut GUIRects, screen_size:
                 }))
                 .build(gui_rects);
 
-            ElementBuilder::new(screen_size, vec2(750.0, 120.0), vec2(60.0, 60.0))
+            ElementBuilder::new(vec2(750.0, 120.0), vec2(60.0, 60.0))
                 .set_color(RGBA::RED.into())
                 .set_border(Some(Border {
                     size: 2,
@@ -73,14 +73,14 @@ pub fn test_screen(time: &EngineTimeData, gui_rects: &mut GUIRects, screen_size:
         {
             let border_size = lerp_f32(5.0, 20.0, time.sin_time(4.0) * 0.5 + 0.5) as u32;
 
-            let border_ = BorderRadius::ForCorners{
+            let border_ = BorderRadius::ForCorners {
                 top_right: lerp_f32(5.0, 20.0, time.sin_time(4.0) * 0.5 + 0.5),
                 bottom_right: lerp_f32(10.0, 15.0, time.sin_time(2.0) * 0.5 + 0.5),
                 top_left: lerp_f32(10.0, 20.0, time.sin_time(3.0) * 0.5 + 0.5),
                 bottom_left: lerp_f32(0.0, 30.0, time.sin_time(5.0) * 0.5 + 0.5),
             };
 
-            ElementBuilder::new(screen_size, vec2(600.0, 50.0), vec2(60.0, 60.0))
+            ElementBuilder::new(vec2(600.0, 50.0), vec2(60.0, 60.0))
                 .set_color(RGBA::RED.into())
                 .set_round_rect(border_.into())
                 .set_border(Some(Border {
@@ -90,7 +90,7 @@ pub fn test_screen(time: &EngineTimeData, gui_rects: &mut GUIRects, screen_size:
                 .set_rotation(time.time * 2.5)
                 .build(gui_rects);
 
-            ElementBuilder::new(screen_size, vec2(675.0, 50.0), vec2(60.0, 60.0))
+            ElementBuilder::new(vec2(675.0, 50.0), vec2(60.0, 60.0))
                 .set_color(RGBA::RED.into())
                 .set_circle()
                 .set_border(Some(Border {
@@ -100,7 +100,7 @@ pub fn test_screen(time: &EngineTimeData, gui_rects: &mut GUIRects, screen_size:
                 .set_rotation(time.time * 2.5)
                 .build(gui_rects);
 
-            ElementBuilder::new(screen_size, vec2(750.0, 50.0), vec2(60.0, 60.0))
+            ElementBuilder::new(vec2(750.0, 50.0), vec2(60.0, 60.0))
                 .set_color(RGBA::RED.into())
                 .set_border(Some(Border {
                     size: border_size,
@@ -113,7 +113,7 @@ pub fn test_screen(time: &EngineTimeData, gui_rects: &mut GUIRects, screen_size:
         let size_x = lerp_f32(60.0, 120.0, time.sin_time(2.0) * 0.5 + 0.5);
         let size_y = lerp_f32(60.0, 120.0, time.cos_time(2.0) * 0.5 + 0.5);
         let circle_rad = lerp_f32(5.0, 20.0, time.sin_time(4.0) * 0.5 + 0.5);
-        ElementBuilder::new(screen_size, vec2(850.0, 100.0), vec2(size_x, size_y))
+        ElementBuilder::new(vec2(850.0, 100.0), vec2(size_x, size_y))
             .set_color(RGBA::RED.into())
             .set_circle()
             .set_border(Some(Border {
@@ -122,7 +122,7 @@ pub fn test_screen(time: &EngineTimeData, gui_rects: &mut GUIRects, screen_size:
             }))
             .build(gui_rects);
 
-        ElementBuilder::new(screen_size, vec2(850.0, 240.0), vec2(70.0, 140.0))
+        ElementBuilder::new(vec2(850.0, 240.0), vec2(70.0, 140.0))
             .set_color(RGBA::RED.into())
             .set_circle()
             .set_border(Some(Border {
@@ -131,7 +131,7 @@ pub fn test_screen(time: &EngineTimeData, gui_rects: &mut GUIRects, screen_size:
             }))
             .build(gui_rects);
 
-        ElementBuilder::new(screen_size, vec2(850.0, 360.0), vec2(140.0, 70.0))
+        ElementBuilder::new(vec2(850.0, 360.0), vec2(140.0, 70.0))
             .set_color(RGBA::RED.into())
             .set_circle()
             .set_border(Some(Border {
@@ -141,19 +141,19 @@ pub fn test_screen(time: &EngineTimeData, gui_rects: &mut GUIRects, screen_size:
             .build(gui_rects);
     }
 
-    ElementBuilder::new(screen_size, vec2(100.0, 400.0), vec2(70.0, 70.0))
+    ElementBuilder::new(vec2(100.0, 400.0), vec2(70.0, 70.0))
         .set_color(RGBA::GREY.into())
         .set_circle()
         .build(gui_rects);
 
     let size_interp = ((f32::sin(time.time) * 50.0) + 100.0);
-    ElementBuilder::new(screen_size, vec2(100.0, 500.0), vec2(size_interp, 70.0))
+    ElementBuilder::new(vec2(100.0, 500.0), vec2(size_interp, 70.0))
         .set_circle()
         .set_color(RGBA::GREY.into())
         .build(gui_rects);
 
     let size_interp = ((f32::sin(time.time) * 50.0) + 100.0);
-    ElementBuilder::new(screen_size, vec2(240.0, 100.0), vec2(size_interp, 70.0))
+    ElementBuilder::new(vec2(240.0, 100.0), vec2(size_interp, 70.0))
         .set_circle()
         .set_color(RGBA::RED.into())
         .set_rotation(time.time * 2.0)
@@ -168,7 +168,6 @@ pub fn test_screen(time: &EngineTimeData, gui_rects: &mut GUIRects, screen_size:
     }));
     create_new_rect_element(
         gui_rects,
-        screen_size,
         uvec2(240, 400).as_vec2(),
         uvec2(70, 70).as_vec2(),
         time.time * 2.0,
@@ -189,7 +188,6 @@ pub fn test_screen(time: &EngineTimeData, gui_rects: &mut GUIRects, screen_size:
     }));
     create_new_rect_element(
         gui_rects,
-        screen_size,
         uvec2(240, 500).as_vec2(),
         uvec2(70, 70).as_vec2(),
         time.time * 2.0,
@@ -218,7 +216,6 @@ pub fn test_screen(time: &EngineTimeData, gui_rects: &mut GUIRects, screen_size:
     }));
     create_new_rect_element(
         gui_rects,
-        screen_size,
         uvec2(310, 100).as_vec2(),
         uvec2(70, 70).as_vec2(),
         time.time * 2.0,
@@ -246,7 +243,6 @@ pub fn test_screen(time: &EngineTimeData, gui_rects: &mut GUIRects, screen_size:
     }));
     create_new_rect_element(
         gui_rects,
-        screen_size,
         uvec2(310, 200).as_vec2(),
         uvec2(70, 70).as_vec2(),
         time.time * 2.0,
@@ -266,7 +262,6 @@ pub fn test_screen(time: &EngineTimeData, gui_rects: &mut GUIRects, screen_size:
     }));
     create_new_rect_element(
         gui_rects,
-        screen_size,
         uvec2(330, 500).as_vec2(),
         uvec2(70, 70).as_vec2(),
         0.0,
@@ -288,7 +283,6 @@ pub fn test_screen(time: &EngineTimeData, gui_rects: &mut GUIRects, screen_size:
     let size_interp = ((f32::sin(time.time) * 50.0) as i32 + 100) as u32;
     create_new_rect_element(
         gui_rects,
-        screen_size,
         uvec2(450, 100).as_vec2(),
         uvec2(size_interp, 70).as_vec2(),
         0.0,
@@ -311,7 +305,6 @@ pub fn test_screen(time: &EngineTimeData, gui_rects: &mut GUIRects, screen_size:
     let size_interp = ((sin_time * 30.0) as i32 + 60) as u32;
     create_new_rect_element(
         gui_rects,
-        screen_size,
         uvec2(450, 250).as_vec2(),
         uvec2(100, size_interp).as_vec2(),
         0.0,
@@ -335,7 +328,6 @@ pub fn test_screen(time: &EngineTimeData, gui_rects: &mut GUIRects, screen_size:
     let size_interp = ((sin_time * 30.0) as i32 + 60) as u32;
     create_new_rect_element(
         gui_rects,
-        screen_size,
         uvec2(450, 400).as_vec2(),
         uvec2(100, size_interp).as_vec2(),
         sin_time_rot,
@@ -347,30 +339,26 @@ pub fn test_screen(time: &EngineTimeData, gui_rects: &mut GUIRects, screen_size:
         &color,
     );
 
-    ElementBuilder::new(
-        screen_size,
-        uvec2(650, 400).as_vec2(),
-        uvec2(300, 150).as_vec2(),
-    )
-    .set_circle()
-    .set_radial_gradient(
-        RadialGradient {
-            colors: [RGBA::BLUE, RGBA::RED],
-            center_position: vec2(0.0, 0.0),
-            end_radius: 100.0,
-            start_radius: 10.0,
-        }
-        .into(),
-    )
-    .set_rect_mask(
-        RectMask {
-            position: uvec2(450, 450).as_vec2(),
-            size: uvec2(380, 225).as_vec2(),
-        }
-        .into(),
-    )
-    .set_rotation(0.6)
-    .build(gui_rects);
+    ElementBuilder::new(uvec2(650, 400).as_vec2(), uvec2(300, 150).as_vec2())
+        .set_circle()
+        .set_radial_gradient(
+            RadialGradient {
+                colors: [RGBA::BLUE, RGBA::RED],
+                center_position: vec2(0.0, 0.0),
+                end_radius: 100.0,
+                start_radius: 10.0,
+            }
+            .into(),
+        )
+        .set_rect_mask(
+            RectMask {
+                position: uvec2(450, 450).as_vec2(),
+                size: uvec2(380, 225).as_vec2(),
+            }
+            .into(),
+        )
+        .set_rotation(0.6)
+        .build(gui_rects);
 
     let sin_time = time.sin_time(2.0);
     let cos_time = time.cos_time(1.5);
@@ -378,7 +366,7 @@ pub fn test_screen(time: &EngineTimeData, gui_rects: &mut GUIRects, screen_size:
     let center_position = vec2(sin_time * 40.0, cos_time * 20.0);
     let size = vec2(180.0, size_interp);
     let position = vec2(650.0, 250.0);
-    ElementBuilder::new(screen_size, position, size)
+    ElementBuilder::new(position, size)
         .set_radial_gradient(
             RadialGradient {
                 colors: [RGBA::BLUE, RGBA::WHITE],

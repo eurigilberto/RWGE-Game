@@ -1,21 +1,35 @@
+#[derive(Debug)]
 pub enum State {
     Inactive,
     Hovered,
     Active,
 }
 
-#[derive(PartialEq, Default, Clone, Copy)]
+#[derive(Default, Clone, Copy, Debug)]
 pub struct Uiid {
     id: u32,
     depth: u32,
 }
 
+impl Into<ControlId> for Uiid{
+    fn into(self) -> ControlId {
+        ControlId::Control(self)
+    }
+}
+
+impl PartialEq for Uiid {
+    fn eq(&self, other: &Self) -> bool {
+        self.id == other.id && self.depth == other.depth
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
 pub enum ControlId {
     Active(Uuid),
     Control(Uiid),
 }
 
-use rwge::glam::{Vec2, vec2};
+use rwge::glam::{vec2, Vec2};
 use rwge::gui::rect_ui::event::UIEvent;
 use rwge::gui::rect_ui::RectMask;
 use rwge::uuid::Uuid;
@@ -27,41 +41,43 @@ pub struct ControlState {
     current_ui_id: Option<Uiid>,
 
     hot: Option<Uiid>,
+    hold_hover: bool,
     pub hovered: Option<Uiid>,
-
-    pub max_depth: u32,
 
     hold_active: bool,
     active: Uuid,
 
-    pub last_cursor_position: Vec2,
+    pub last_cursor_position: Option<Vec2>,
+    pub depth_stack: Vec<u32>,
 }
 
 impl ControlState {
     pub fn new() -> Self {
         Self {
-            last_cursor_position: Vec2::ZERO,
+            last_cursor_position: None,
 
             current_ui_id: None,
 
             hot: None,
+            hold_hover: false,
             hovered: None,
-            max_depth: 0,
 
             active: Uuid::nil(),
             hold_active: false,
+            depth_stack: Vec::with_capacity(25),
         }
     }
 
     pub fn get_id(&mut self) -> Uiid {
         self.current_ui_id
+            .as_mut()
             .expect("GUI Control state was not initialized properly")
             .id += 1;
         self.current_ui_id.unwrap()
     }
 
     /// Returs true if hot was changed
-    fn set_hot(&mut self, id: Uiid) -> bool {
+    pub fn set_hot(&mut self, id: Uiid) -> bool {
         if self.active.is_nil() {
             if let Some(hot) = &mut self.hot {
                 if hot.depth <= id.depth {
@@ -76,32 +92,53 @@ impl ControlState {
         return false;
     }
 
-    pub fn increase_depth(&mut self) {
+    fn unset_hovered(&mut self, id: Uiid) -> bool {
+        if let Some(hovered) = self.hovered {
+            if hovered == id {
+                self.hovered = None;
+                return true
+            }
+        }
+        return false
+    }
+
+    pub fn set_depth(&mut self, depth: u32) {
         let current_id = &mut self
             .current_ui_id
             .expect("GUI Control state was not initialized properly");
-        current_id.depth += 1;
-        if self.max_depth < current_id.depth {
-            self.max_depth = current_id.depth;
+        current_id.depth = depth;
+    }
+
+    pub fn set_depth_and_save(&mut self, depth: u32) {
+        self.depth_stack.push(self.get_current_depth());
+        self.set_depth(depth);
+    }
+
+    pub fn restore_depth(&mut self) {
+        let pop_depth = self.depth_stack.pop();
+        if let Some(depth) = pop_depth {
+            self.set_depth(depth);
         }
     }
-    pub fn reduce_depth(&mut self) {
-        self.current_ui_id
-            .expect("GUI Control state was not initialized properly")
-            .depth -= 1;
+
+    pub fn get_current_depth(&self) -> u32 {
+        match self.current_ui_id {
+            Some(ui_id) => ui_id.depth,
+            None => 0,
+        }
     }
 
     /// Returns true if the element is hot now
-    pub fn update_hot_hovered(&mut self, id: Uiid, control_rect: &RectMask) -> bool {
-        //self.mouse_position
-        if control_rect.inside_rect(self.last_cursor_position) {
-            self.set_hot(id)
-        } else {
-            if let Some(ref hovered) = self.hovered {
-                if *hovered == id {
-                    self.hovered = None;
-                }
+    pub fn update_hot_with_rect(&mut self, id: Uiid, control_rect: &RectMask) -> bool {
+        if let Some(cursor_pos) = self.last_cursor_position {
+            if control_rect.inside_rect(cursor_pos) {
+                self.set_hot(id)
+            } else {
+                self.unset_hovered(id);
+                false
             }
+        } else {
+            self.unset_hovered(id);
             false
         }
     }
@@ -129,24 +166,24 @@ impl ControlState {
         }
     }
 
-    pub fn set_active(&mut self, id: Uiid) -> Option<Uuid>{
-        if let Some(hovered) = self.hovered{
+    pub fn set_active(&mut self, id: Uiid) -> Option<Uuid> {
+        if let Some(hovered) = self.hovered {
             if self.active.is_nil() && hovered == id {
                 self.active = Uuid::new_v4();
                 Some(self.active)
-            }else{
+            } else {
                 None
             }
-        }else{
+        } else {
             None
         }
     }
 
-    pub fn remove_active(&mut self, active_id: Uuid) -> Result<(),()>{
+    pub fn remove_active(&mut self, active_id: Uuid) -> Result<(), ()> {
         if self.active == active_id {
             self.active = Uuid::nil();
             Ok(())
-        }else{
+        } else {
             Err(())
         }
     }
@@ -160,16 +197,15 @@ impl ControlState {
     /// Called at the start of the frame
     pub fn on_gui_start(&mut self) {
         self.hold_active = false;
-        self.current_ui_id = Some(Uiid::default());
+        self.current_ui_id = Some(Uiid { id: 0, depth: 0 });
     }
 
     pub fn on_gui_end(&mut self) -> State {
         // Remove active because it did not update its active status this frame
-
+        assert_eq!(self.depth_stack.len(), 0, "The depth stack should be empty. If it is not empty it might inadvertently change the state of other controls.");
         if self.active.is_nil() {
-            if self.hot.is_some() {
+            if self.hot.is_some(){
                 self.hovered = self.hot;
-                self.hot = None;
             }
 
             if !self.active.is_nil() {
@@ -185,18 +221,29 @@ impl ControlState {
         }
     }
 
-    pub fn on_cursor_exit(&mut self){
+    pub fn on_cursor_exit(&mut self) {
         self.active = Uuid::nil();
         self.current_ui_id = None;
         self.hot = None;
         self.hold_active = false;
-        self.max_depth = 0;
-        self.last_cursor_position = vec2(-1.0, -1.0);
+        self.last_cursor_position = None;
     }
 
-    pub fn on_frame_end(&mut self){
+    pub fn on_after_update(&mut self) {
         if !self.hold_active {
             self.active = Uuid::nil();
+        }
+        if self.hot.is_some() {
+            self.hold_hover = true;
+        }else{
+            self.hold_hover = false;
+        }
+        self.hot = None;
+    }
+
+    pub fn on_frame_end(&mut self) {
+        if !self.hold_hover {
+            self.hovered = None;
         }
     }
 }

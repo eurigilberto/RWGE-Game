@@ -24,20 +24,23 @@ pub fn main_window_top_bar(
     };
 
     match event {
-        UIEvent::Render { gui_rects } => {
-            let state = control_state.get_control_state(get_control_id());
-            let color: RGBA = if let State::Active | State::Hovered = state {
+        UIEvent::Render { gui_rects, .. } => {
+            let current_control_id = get_control_id();
+            let state = control_state.get_control_state(current_control_id);
+            let color: RGBA = if let State::Active = state {
+                RGBA::GREEN
+            } else if let State::Hovered = state {
                 RGBA::rrr1(0.45)
             } else {
                 RGBA::rrr1(0.25)
             };
 
-            ElementBuilder::new(get_engine_data(public_data).screen_size, position, size)
+            ElementBuilder::new(position, size)
                 .set_color(color.into())
                 .build(gui_rects);
         }
         UIEvent::Update => {
-            control_state.update_hot_hovered(control_id, &RectMask { position, size });
+            control_state.update_hot_with_rect(control_id, &RectMask { position, size });
             match control_state.get_control_state(get_control_id()) {
                 State::Active => {
                     let window_pos = drag_element.compute_element_position();
@@ -56,13 +59,13 @@ pub fn main_window_top_bar(
             }
         }
         UIEvent::MouseMove { raw, .. } => {
-            control_state.update_hot_hovered(control_id, &RectMask { position, size });
+            control_state.update_hot_with_rect(control_id, &RectMask { position, size });
 
             let outer_pos = get_window(public_data).outer_position().unwrap();
             let outer_pos = (ivec2(outer_pos.x, outer_pos.y)).as_vec2();
             drag_element.update_position(outer_pos + *raw);
         }
-        UIEvent::MouseButton(input) => match (input.data.button, input.data.state) {
+        UIEvent::MouseButton(input) => match (input.button, input.state) {
             (rwge::winit::event::MouseButton::Left, rwge::winit::event::ElementState::Pressed) => {
                 *active_id = control_state.set_active(control_id);
                 if let Some(_) = active_id {
