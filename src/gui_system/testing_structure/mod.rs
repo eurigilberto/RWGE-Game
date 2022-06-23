@@ -7,7 +7,7 @@ use rwge::{
             builder::ElementBuilder, create_new_rect_element, Border, ColoringType, LinearGradient,
             MaskType, RadialGradient, TextureSlice,
         },
-        BorderRadius, ExtraBufferData, GUIRects, RectMask,
+        BorderRadius, ExtraBufferData, GUIRects, Rect,
     },
     math_utils::lerp_f32,
 };
@@ -171,7 +171,7 @@ pub fn test_screen(time: &EngineTimeData, gui_rects: &mut GUIRects, screen_size:
         uvec2(240, 400).as_vec2(),
         uvec2(70, 70).as_vec2(),
         time.time * 2.0,
-        ExtraBufferData::NewData(RectMask {
+        ExtraBufferData::NewData(Rect {
             position: (screen_size.as_vec2() * 0.5),
             size: screen_size.as_vec2(),
         }),
@@ -191,7 +191,7 @@ pub fn test_screen(time: &EngineTimeData, gui_rects: &mut GUIRects, screen_size:
         uvec2(240, 500).as_vec2(),
         uvec2(70, 70).as_vec2(),
         time.time * 2.0,
-        ExtraBufferData::NewData(RectMask {
+        ExtraBufferData::NewData(Rect {
             position: (screen_size.as_vec2() * 0.5),
             size: screen_size.as_vec2(),
         }),
@@ -219,7 +219,7 @@ pub fn test_screen(time: &EngineTimeData, gui_rects: &mut GUIRects, screen_size:
         uvec2(310, 100).as_vec2(),
         uvec2(70, 70).as_vec2(),
         time.time * 2.0,
-        ExtraBufferData::NewData(RectMask {
+        ExtraBufferData::NewData(Rect {
             position: (screen_size.as_vec2() * 0.5),
             size: screen_size.as_vec2(),
         }),
@@ -246,7 +246,7 @@ pub fn test_screen(time: &EngineTimeData, gui_rects: &mut GUIRects, screen_size:
         uvec2(310, 200).as_vec2(),
         uvec2(70, 70).as_vec2(),
         time.time * 2.0,
-        ExtraBufferData::NewData(RectMask {
+        ExtraBufferData::NewData(Rect {
             position: (screen_size.as_vec2() * 0.5),
             size: screen_size.as_vec2(),
         }),
@@ -265,7 +265,7 @@ pub fn test_screen(time: &EngineTimeData, gui_rects: &mut GUIRects, screen_size:
         uvec2(330, 500).as_vec2(),
         uvec2(70, 70).as_vec2(),
         0.0,
-        ExtraBufferData::NewData(RectMask {
+        ExtraBufferData::NewData(Rect {
             position: (screen_size.as_vec2() * 0.5),
             size: screen_size.as_vec2(),
         }),
@@ -286,7 +286,7 @@ pub fn test_screen(time: &EngineTimeData, gui_rects: &mut GUIRects, screen_size:
         uvec2(450, 100).as_vec2(),
         uvec2(size_interp, 70).as_vec2(),
         0.0,
-        ExtraBufferData::NewData(RectMask {
+        ExtraBufferData::NewData(Rect {
             position: (screen_size.as_vec2() * 0.5),
             size: screen_size.as_vec2(),
         }),
@@ -308,7 +308,7 @@ pub fn test_screen(time: &EngineTimeData, gui_rects: &mut GUIRects, screen_size:
         uvec2(450, 250).as_vec2(),
         uvec2(100, size_interp).as_vec2(),
         0.0,
-        ExtraBufferData::NewData(RectMask {
+        ExtraBufferData::NewData(Rect {
             position: (screen_size.as_vec2() * 0.5),
             size: screen_size.as_vec2(),
         }),
@@ -331,7 +331,7 @@ pub fn test_screen(time: &EngineTimeData, gui_rects: &mut GUIRects, screen_size:
         uvec2(450, 400).as_vec2(),
         uvec2(100, size_interp).as_vec2(),
         sin_time_rot,
-        ExtraBufferData::NewData(RectMask {
+        ExtraBufferData::NewData(Rect {
             position: (screen_size.as_vec2() * 0.5),
             size: screen_size.as_vec2(),
         }),
@@ -351,7 +351,7 @@ pub fn test_screen(time: &EngineTimeData, gui_rects: &mut GUIRects, screen_size:
             .into(),
         )
         .set_rect_mask(
-            RectMask {
+            Rect {
                 position: uvec2(450, 450).as_vec2(),
                 size: uvec2(380, 225).as_vec2(),
             }

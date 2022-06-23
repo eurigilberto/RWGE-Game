@@ -1,4 +1,4 @@
-use rwge::{glam::{Vec2, ivec2, vec2}, gui::rect_ui::{event::UIEvent, element::builder::ElementBuilder, RectMask}, uuid::Uuid, color::{RGBA, HSLA}, winit::dpi::PhysicalPosition};
+use rwge::{glam::{Vec2, ivec2, vec2}, gui::rect_ui::{event::UIEvent, element::builder::ElementBuilder, Rect}, uuid::Uuid, color::{RGBA, HSLA}, winit::dpi::PhysicalPosition};
 
 use crate::public_data::{PublicData, utils::{get_engine_data, get_window}};
 
@@ -40,7 +40,7 @@ pub fn main_window_top_bar(
                 .build(gui_rects);
         }
         UIEvent::Update => {
-            control_state.update_hot_with_rect(control_id, &RectMask { position, size });
+            control_state.update_hot_with_rect(control_id, &Rect { position, size });
             match control_state.get_control_state(get_control_id()) {
                 State::Active => {
                     let window_pos = drag_element.compute_element_position();
@@ -59,7 +59,7 @@ pub fn main_window_top_bar(
             }
         }
         UIEvent::MouseMove { raw, .. } => {
-            control_state.update_hot_with_rect(control_id, &RectMask { position, size });
+            control_state.update_hot_with_rect(control_id, &Rect { position, size });
 
             let outer_pos = get_window(public_data).outer_position().unwrap();
             let outer_pos = (ivec2(outer_pos.x, outer_pos.y)).as_vec2();

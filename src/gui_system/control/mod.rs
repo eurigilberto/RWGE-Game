@@ -31,7 +31,7 @@ pub enum ControlId {
 
 use rwge::glam::{vec2, Vec2};
 use rwge::gui::rect_ui::event::UIEvent;
-use rwge::gui::rect_ui::RectMask;
+use rwge::gui::rect_ui::Rect;
 use rwge::uuid::Uuid;
 
 pub mod drag_element;
@@ -129,7 +129,7 @@ impl ControlState {
     }
 
     /// Returns true if the element is hot now
-    pub fn update_hot_with_rect(&mut self, id: Uiid, control_rect: &RectMask) -> bool {
+    pub fn update_hot_with_rect(&mut self, id: Uiid, control_rect: &Rect) -> bool {
         if let Some(cursor_pos) = self.last_cursor_position {
             if control_rect.inside_rect(cursor_pos) {
                 self.set_hot(id)

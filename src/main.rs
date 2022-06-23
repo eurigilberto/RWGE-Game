@@ -54,6 +54,7 @@ impl Game {
             &engine.system_bind_group_layout,
             size,
             &mut render_texture_slotmap,
+            1024
         );
         let gui_system = GUISystem::new(size);
 
@@ -190,7 +191,7 @@ fn main() {
     let event_loop = rwge::winit::event_loop::EventLoop::new();
     
     let window = rwge::winit::window::WindowBuilder::new()
-        .with_inner_size(rwge::winit::dpi::LogicalSize::<f32>::new(960.0, 520.0))
+        .with_inner_size(rwge::winit::dpi::LogicalSize::<f32>::new(1128.0, 740.0))
         .with_decorations(false).with_resizable(true)
         //.with_transparent(true)
         .build(&event_loop)

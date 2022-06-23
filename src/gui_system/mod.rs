@@ -23,14 +23,14 @@ use rwge::{
         GUIRects,
     },
     slotmap::slotmap::Slotmap,
-    Engine,
+    Engine, color::RGBA,
 };
 
 use crate::public_data::{utils::{get_render_texture, get_engine_data}, PublicData};
 
 use self::{
     gui_container::{container_one::ContainerOne, GUIContainer},
-    window_layout::{DividedElement, GUIContainerSlotkey, WindowSystem},
+    window_layout::{GUIContainerSlotkey, WindowSystem, DividedElement},
 };
 
 /// This version of the window system is only going to work with windowed spaces. This needs to be refactored in the future to support docking.
@@ -50,7 +50,8 @@ impl GUISystem {
             .push_gui_container(Box::new(ContainerOne {
                 name: String::from("Wind C1"),
                 value: 0.4,
-                cound: 10,
+                count: 20,
+                color: RGBA::rgb(0.0, 0.25, 0.75),
             }))
             .unwrap();
 
@@ -58,7 +59,8 @@ impl GUISystem {
             .push_gui_container(Box::new(ContainerOne {
                 name: String::from("Wind C2"),
                 value: 0.6,
-                cound: 5,
+                count: 5,
+                color: RGBA::rgb(0.75, 0.25, 0.0),
             }))
             .unwrap();
 
@@ -66,13 +68,14 @@ impl GUISystem {
             .push_gui_container(Box::new(ContainerOne {
                 name: String::from("Wind C3"),
                 value: 1.0,
-                cound: 7,
+                count: 50,
+                color: RGBA::rgb(0.1, 0.75, 0.25),
             }))
             .unwrap();
 
         let tab_1 = window_layouting.create_tab(vec![c1_key, c2_key]);
         let tab_2 = window_layouting.create_tab(vec![c2_key, c3_key, c1_key]);
-        let tab_3 = window_layouting.create_tab(vec![c3_key]);
+        let tab_3 = window_layouting.create_tab(vec![c3_key, c2_key]);
 
         let single_1 = window_layouting
             .create_single_layout_element(tab_1)

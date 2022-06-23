@@ -19,6 +19,10 @@ use rwge::{
 
 use crate::public_data::PublicData;
 
+pub use tabs_container::{GUI_ACTIVE_COLOR, GUI_INACTIVE_COLOR, GUI_HOVER_COLOR};
+
+pub use self::layout_element::DividedElement;
+
 use super::{control::ControlState, gui_container::GUIContainer, ContainerInfo};
 
 rwge::create_custom_key!(
@@ -33,11 +37,6 @@ rwge::create_custom_key!(
 rwge::create_custom_key!(
     WindowSlotKey;
 );
-
-pub struct DividedElement {
-    pub layout_key: LayoutSlotKey,
-    pub size: f32,
-}
 
 pub struct TabLayoutInfo {
     key: TabsSlotKey,

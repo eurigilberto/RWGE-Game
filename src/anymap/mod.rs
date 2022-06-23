@@ -2,9 +2,12 @@ use std::{
     any::{Any, TypeId},
     collections::HashMap,
 };
+
 pub struct Anymap {
     map: HashMap<TypeId, Box<dyn Any>>,
 }
+
+#[allow(dead_code)]
 impl Anymap{
     pub fn new() -> Self {
         Self {

@@ -35,12 +35,19 @@ pub struct EngineTimeData {
     pub time_millis_since_start: u128,
 }
 
+#[allow(dead_code)]
 impl EngineTimeData {
     pub fn sin_time(&self, mult: f32) -> f32 {
         f32::sin(self.time * mult)
     }
+    pub fn sin_time_phase(&self, mult: f32, phase: f32) -> f32{
+        f32::sin(self.time * mult + phase)
+    }
     pub fn cos_time(&self, mult: f32) -> f32 {
         f32::cos(self.time * mult)
+    }
+    pub fn cos_time_phase(&self, mult: f32, phase: f32) -> f32 {
+        f32::cos(self.time * mult + phase)
     }
 }
 
@@ -70,6 +77,7 @@ impl EngineData {
     }
 }
 
+#[allow(dead_code)]
 pub mod utils {
     use rwge::{
         engine_time::EngineTime,
