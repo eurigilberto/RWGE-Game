@@ -13,13 +13,14 @@ use crate::{
     public_data::{self, utils::get_engine_data, EngineData, PublicData},
 };
 
-use super::GUIContainer;
+use super::{GUIContainer, render_container_background};
 
 pub struct ContainerOne {
     pub name: String,
     pub value: f32,
     pub color: RGBA,
     pub count: u32,
+
 }
 
 impl GUIContainer for ContainerOne {
@@ -33,23 +34,14 @@ impl GUIContainer for ContainerOne {
         public_data: &PublicData,
         container_info: ContainerInfo,
         control_state: &mut ControlState,
+        instance_index: usize
     ) {
         //test
-        let position = container_info.position;
-        let size = container_info.size;
-        let container_mask = Rect { position, size };
+        let position = container_info.rect.position;
+        let size = container_info.rect.size;
         match event {
             UIEvent::Render { gui_rects, .. } => {
-                ElementBuilder::new(position, size)
-                    .set_color(GUI_ACTIVE_COLOR.into())
-                    .set_rect_mask(
-                        Rect {
-                            position: position,
-                            size: size,
-                        }
-                        .into(),
-                    )
-                    .build(gui_rects);
+                render_container_background(gui_rects, &container_info);
             }
             _ => {}
         }
@@ -95,7 +87,8 @@ impl GUIContainer for ContainerOne {
                         let rect_size = vec2(size_elem_anim, size_elem_anim);
                         let element_builder = ElementBuilder::new(rect_position, rect_size)
                             .set_color(self.color.into())
-                            .set_rect_mask(container_mask.into());
+                            .set_rect_mask(container_info.rect.into())
+                            .set_round_rect(BorderRadius::ForAll(5.0).into());
                         if i % 2 == 0 {
                             element_builder.set_rotation(
                                 get_engine_data(public_data).time.time * (2.0 + (i % 7) as f32),

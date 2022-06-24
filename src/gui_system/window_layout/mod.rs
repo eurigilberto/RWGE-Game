@@ -65,7 +65,9 @@ pub struct WindowSystem {
     pub control_state: ControlState,
 }
 
-const DEPTH_SLICE_SIZE: u32 = 15;
+pub const DEPTH_SLICE_SIZE: u32 = 15;
+pub const SHADOW_DEPTH_OFFSET: u32 = 5;
+pub const RESIZE_CONTROL_DEPTH_OFFSET: u32 = 10;
 
 impl WindowSystem {
     pub fn new() -> Self {
@@ -141,6 +143,8 @@ impl WindowSystem {
         let mut layout_handle_stack = Vec::<LayoutOrTabInfo>::new();
 
         layout_handle_stack.push(window.handle_event(event, public_data, control_state, depth_range));
+        
+        //println!("Layout handle push");
         loop {
             match layout_handle_stack.pop() {
                 Some(layout_handle) => match layout_handle.key {
@@ -161,6 +165,7 @@ impl WindowSystem {
                 None => break,
             }
         }
+        //println!("Layout handle push stop");
 
         assert_eq!(
             layout_handle_stack.len(),
@@ -179,7 +184,7 @@ impl WindowSystem {
         event: &mut UIEvent,
         public_data: &PublicData,
     ) {
-        for tab in tab_handle_stack.drain(..) {
+        for (index, tab) in tab_handle_stack.drain(..).enumerate() {
             let tab_container = tabs_slotmap.get_value_mut(&tab.key).unwrap();
 
             let gui_container_info = tab_container.handle_event(
@@ -188,6 +193,7 @@ impl WindowSystem {
                 tab.container_info,
                 &gui_container_slotmap,
                 control_state,
+                index
             );
 
             let gui_container = gui_container_slotmap
@@ -198,6 +204,7 @@ impl WindowSystem {
                 public_data,
                 gui_container_info.container_info,
                 control_state,
+                index
             );
         }
     }

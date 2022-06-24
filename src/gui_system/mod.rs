@@ -9,18 +9,23 @@ mod control;
 
 #[derive(Copy, Clone)]
 pub struct ContainerInfo{
-    position: Vec2,
-    size: Vec2,
-    depth_range: (u32, u32)
+    rect: Rect,
+    depth_range: (u32, u32),
     //Maybe more in the future
 }
 
+impl ContainerInfo {
+    pub fn get_top_left_position(&self) -> Vec2{
+        self.rect.get_top_left_position()
+    }
+}
+
 use rwge::{
-    glam::{uvec2, UVec2, Vec2},
+    glam::{uvec2, UVec2, Vec2, vec2},
     gui::rect_ui::{
         element::{create_new_rect_element, ColoringType, MaskType},
         event::UIEvent,
-        GUIRects,
+        GUIRects, Rect,
     },
     slotmap::slotmap::Slotmap,
     Engine, color::RGBA,
@@ -29,7 +34,7 @@ use rwge::{
 use crate::public_data::{utils::{get_render_texture, get_engine_data}, PublicData};
 
 use self::{
-    gui_container::{container_one::ContainerOne, GUIContainer},
+    gui_container::{container_one::ContainerOne, GUIContainer, performance_monitor::PerformanceMonitor},
     window_layout::{GUIContainerSlotkey, WindowSystem, DividedElement},
 };
 
@@ -73,9 +78,12 @@ impl GUISystem {
             }))
             .unwrap();
 
+        let perf_key = window_layouting.push_gui_container(Box::new(PerformanceMonitor::new())).unwrap();
+
         let tab_1 = window_layouting.create_tab(vec![c1_key, c2_key]);
         let tab_2 = window_layouting.create_tab(vec![c2_key, c3_key, c1_key]);
         let tab_3 = window_layouting.create_tab(vec![c3_key, c2_key]);
+        let perf_tab = window_layouting.create_tab(vec![perf_key]);
 
         let single_1 = window_layouting
             .create_single_layout_element(tab_1)
@@ -86,6 +94,20 @@ impl GUISystem {
         let single_3 = window_layouting
             .create_single_layout_element(tab_3)
             .unwrap();
+        let single_perf = window_layouting
+            .create_single_layout_element(perf_tab)
+            .unwrap();
+
+        let center_vertical = window_layouting.create_vertical_layout_element(vec![
+            DividedElement {
+                layout_key: single_1,
+                size: 3.0,
+            },
+            DividedElement {
+                layout_key: single_perf,
+                size: 1.0,
+            },
+        ]).unwrap();
 
         let horizontal_1 = window_layouting
             .create_horizontal_layout_element(vec![
@@ -137,8 +159,8 @@ impl GUISystem {
                     size: 1.0,
                 },
                 DividedElement {
-                    layout_key: single_1,
-                    size: 1.0,
+                    layout_key: center_vertical,
+                    size: 1.5,
                 },
                 DividedElement {
                     layout_key: vertical_1,

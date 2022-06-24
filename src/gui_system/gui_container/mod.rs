@@ -1,12 +1,17 @@
 pub mod container_one;
+pub mod performance_monitor;
 
 use std::any::Any;
 
-use rwge::{glam::{UVec2, Vec2}, gui::rect_ui::event::UIEvent, Engine};
+use rwge::{
+    glam::{UVec2, Vec2},
+    gui::rect_ui::{event::UIEvent, GUIRects, element::builder::ElementBuilder, Rect},
+    Engine,
+};
 
-use crate::{as_any::AsAny, public_data::{PublicData}};
+use crate::{as_any::AsAny, public_data::PublicData};
 
-use super::{ContainerInfo, control::ControlState};
+use super::{control::ControlState, ContainerInfo, window_layout::GUI_ACTIVE_COLOR};
 
 pub trait GUIContainer: AsAny {
     fn get_name(&self) -> &str;
@@ -15,7 +20,8 @@ pub trait GUIContainer: AsAny {
         event: &mut UIEvent,
         public_data: &PublicData,
         container_info: ContainerInfo,
-        control_state: &mut ControlState
+        control_state: &mut ControlState,
+        instance_index: usize
     );
 }
 
@@ -27,4 +33,14 @@ impl<T: GUIContainer + 'static> AsAny for T {
     fn as_any_mut(&mut self) -> &mut dyn Any {
         self
     }
+}
+
+pub fn render_container_background(gui_rects: &mut GUIRects, container_info: &ContainerInfo) {
+    ElementBuilder::new(container_info.rect.position, container_info.rect.size)
+        .set_color(GUI_ACTIVE_COLOR.into())
+        .set_rect_mask(
+            container_info.rect
+            .into(),
+        )
+        .build(gui_rects);
 }

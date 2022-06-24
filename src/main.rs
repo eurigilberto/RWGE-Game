@@ -11,7 +11,6 @@ use rwge::{
     color::RGBA,
     font,
     font::font_atlas::FontAtlas,
-    glam::{uvec2, Vec2},
     gui::rect_ui::event::UIEvent,
     half,
     render_system::copy_texture_to_surface::CopyTextureToSurface,
@@ -27,7 +26,7 @@ struct Game {
     gui_copy_texture_surface: CopyTextureToSurface,
     gui_system: GUISystem,
     public_data: PublicData,
-    font_atlas_collection: Vec<FontAtlas>
+    //font_atlas_collection: Vec<FontAtlas>
 }
 
 fn create_gui_copy_texture_to_surface(
@@ -66,7 +65,7 @@ impl Game {
 
         public_data.collection.insert(window);
 
-        let font_atlas_collection = write_font_to_gpu(engine, &gui_rects);
+        //let font_atlas_collection = write_font_to_gpu(engine, &gui_rects);
         let gui_copy_texture_surface =
             create_gui_copy_texture_to_surface(&mut public_data, &gui_rects, engine);
 
@@ -75,7 +74,7 @@ impl Game {
             gui_system,
             public_data,
             gui_copy_texture_surface,
-            font_atlas_collection
+            //font_atlas_collection
         }
     }
 }
@@ -83,7 +82,7 @@ impl Game {
 impl rwge::Runtime for Game {
     
     fn frame_start(&mut self, engine: &Engine) {
-        public_data::utils::update_engine_time(&mut self.public_data, &engine.time);
+        public_data::utils::update_engine_time(&mut self.public_data, &engine);
     }
 
     fn handle_event_queue<F>(
@@ -108,6 +107,7 @@ impl rwge::Runtime for Game {
                         .collection
                         .get_mut::<Slotmap<RenderTexture>>()
                         .expect("Render texture slotmap not found");
+
                     self.gui_rects
                         .resize(new_size, &engine.render_system, rt_slotmap);
 

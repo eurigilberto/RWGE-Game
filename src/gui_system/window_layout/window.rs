@@ -26,13 +26,13 @@ use crate::{
     },
 };
 
-use super::{LayoutOrTabInfo, LayoutOrTabKey, LayoutSlotKey};
+use super::{LayoutOrTabInfo, LayoutOrTabKey, LayoutSlotKey, RESIZE_CONTROL_DEPTH_OFFSET};
 
 pub struct ResizeDrag {
     active_id: Uuid,
     new_size: Vec2,
     get_count: u32,
-    changed: bool
+    changed: bool,
 }
 
 impl ResizeDrag {
@@ -41,29 +41,29 @@ impl ResizeDrag {
             active_id: id,
             new_size: size,
             get_count: 0,
-            changed: false
+            changed: false,
         }
     }
 
-    pub fn update_counter(&mut self){
+    pub fn update_counter(&mut self) {
         self.get_count += 1;
         self.get_count %= 2;
     }
 
-    pub fn update_size(&mut self, size: Vec2){
+    pub fn update_size(&mut self, size: Vec2) {
         self.new_size = size;
         self.changed = true;
     }
 
-    pub fn get_size(&mut self)->Option<Vec2>{
+    pub fn get_size(&mut self) -> Option<Vec2> {
         if self.changed {
             self.update_counter();
             if self.get_count == 0 {
                 Some(self.new_size)
-            }else{
+            } else {
                 None
             }
-        }else{
+        } else {
             None
         }
     }
@@ -86,6 +86,7 @@ pub fn resize_controls(
     public_data: &PublicData,
     control_state: &mut ControlState,
     active_id: &mut Option<ResizeDrag>,
+    container_info: &ContainerInfo
 ) {
     let offset_multipliers: [Vec2; 4] = [
         vec2(-1.0, -1.0),
@@ -93,7 +94,7 @@ pub fn resize_controls(
         vec2(1.0, 1.0),
         vec2(-1.0, 1.0),
     ];
-    control_state.set_depth_and_save(15);
+    control_state.set_depth_and_save(container_info.depth_range.0 + RESIZE_CONTROL_DEPTH_OFFSET);
     let rect_mask = Rect { position, size };
     /*for mult in offset_multipliers*/
     {
@@ -136,7 +137,7 @@ pub fn resize_controls(
             UIEvent::Update => {
                 if active_id.is_some() {
                     control_state.hold_active_state(active_id.as_ref().unwrap().active_id);
-                    
+
                     if let Some(new_size) = active_id.as_mut().unwrap().get_size() {
                         let new_size = new_size;
                         public_data.push_mut(Box::new(move |public_data| {
@@ -149,7 +150,6 @@ pub fn resize_controls(
                             ));
                         }));
                     }
-
                 } else {
                     if let Some(cursor_pos) = control_state.last_cursor_position {
                         if (cursor_pos - c_position).length() <= 30.0 {
@@ -173,7 +173,7 @@ pub fn resize_controls(
                                 .set_color(RGBA::RED.into())
                                 .build(gui_rects);
                         }),
-                        15,
+                        container_info.depth_range.0 + RESIZE_CONTROL_DEPTH_OFFSET,
                     ),
                     State::Active => extra_render_steps.push(
                         Box::new(move |gui_rects| {
@@ -183,7 +183,7 @@ pub fn resize_controls(
                                 .set_color(RGBA::GREEN.into())
                                 .build(gui_rects);
                         }),
-                        15,
+                        container_info.depth_range.0 + RESIZE_CONTROL_DEPTH_OFFSET,
                     ),
                     State::Inactive => {}
                 }
@@ -237,6 +237,7 @@ impl UIWindow {
             public_data,
             control_state,
             &mut self.resize_drag_active_id,
+            &ContainerInfo { rect: Rect::default(), depth_range}
         );
 
         match event {
@@ -250,9 +251,11 @@ impl UIWindow {
         LayoutOrTabInfo {
             key: LayoutOrTabKey::LayoutKey(self.layout_key),
             container_info: ContainerInfo {
-                position: inner_position,
-                size: inner_size,
-                depth_range: depth_range,
+                rect: Rect {
+                    position: inner_position,
+                    size: inner_size,
+                },
+                depth_range: depth_range
             },
         }
     }

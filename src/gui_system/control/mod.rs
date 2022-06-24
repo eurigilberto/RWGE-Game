@@ -34,6 +34,7 @@ use rwge::gui::rect_ui::event::UIEvent;
 use rwge::gui::rect_ui::Rect;
 use rwge::uuid::Uuid;
 
+pub mod slider;
 pub mod drag_element;
 pub mod main_window_top_bar;
 
