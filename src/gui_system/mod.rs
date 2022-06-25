@@ -1,41 +1,50 @@
 mod testing_structure;
 use testing_structure::test_screen;
 
-use std::{any::{Any, TypeId}, ops::Range};
+use std::{
+    any::{Any, TypeId},
+    ops::Range,
+};
 
+mod control;
 mod gui_container;
 mod window_layout;
-mod control;
 
 #[derive(Copy, Clone)]
-pub struct ContainerInfo{
+pub struct ContainerInfo {
     rect: Rect,
     depth_range: (u32, u32),
     //Maybe more in the future
 }
 
 impl ContainerInfo {
-    pub fn get_top_left_position(&self) -> Vec2{
+    pub fn get_top_left_position(&self) -> Vec2 {
         self.rect.get_top_left_position()
     }
 }
 
 use rwge::{
-    glam::{uvec2, UVec2, Vec2, vec2},
+    color::RGBA,
+    glam::{uvec2, vec2, UVec2, Vec2},
     gui::rect_ui::{
         element::{create_new_rect_element, ColoringType, MaskType},
         event::UIEvent,
         GUIRects, Rect,
     },
     slotmap::slotmap::Slotmap,
-    Engine, color::RGBA,
+    Engine,
 };
 
-use crate::public_data::{utils::{get_render_texture, get_engine_data}, PublicData};
+use crate::public_data::{
+    utils::{get_engine_data, get_render_texture},
+    PublicData,
+};
 
 use self::{
-    gui_container::{container_one::ContainerOne, GUIContainer, performance_monitor::PerformanceMonitor},
-    window_layout::{GUIContainerSlotkey, WindowSystem, DividedElement},
+    gui_container::{
+        container_one::ContainerOne, performance_monitor::PerformanceMonitor, GUIContainer,
+    },
+    window_layout::{DividedElement, GUIContainerSlotkey, WindowSystem},
 };
 
 /// This version of the window system is only going to work with windowed spaces. This needs to be refactored in the future to support docking.
@@ -52,33 +61,35 @@ impl GUISystem {
         let mut window_layouting = WindowSystem::new();
 
         let c1_key = window_layouting
-            .push_gui_container(Box::new(ContainerOne {
-                name: String::from("Wind C1"),
-                value: 0.4,
-                count: 20,
-                color: RGBA::rgb(0.0, 0.25, 0.75),
-            }))
+            .push_gui_container(Box::new(ContainerOne::new(
+                String::from("Wind C1"),
+                0.0,
+                RGBA::rgb(0.0, 0.25, 0.75),
+                50,
+            )))
             .unwrap();
 
         let c2_key = window_layouting
-            .push_gui_container(Box::new(ContainerOne {
-                name: String::from("Wind C2"),
-                value: 0.6,
-                count: 5,
-                color: RGBA::rgb(0.75, 0.25, 0.0),
-            }))
+            .push_gui_container(Box::new(ContainerOne::new(
+                String::from("Wind C2"),
+                0.0,
+                RGBA::rgb(0.75, 0.25, 0.0),
+                10,
+            )))
             .unwrap();
 
         let c3_key = window_layouting
-            .push_gui_container(Box::new(ContainerOne {
-                name: String::from("Wind C3"),
-                value: 1.0,
-                count: 50,
-                color: RGBA::rgb(0.1, 0.75, 0.25),
-            }))
+            .push_gui_container(Box::new(ContainerOne::new(
+                String::from("Wind C3"),
+                0.0,
+                RGBA::rgb(0.1, 0.75, 0.25),
+                100,
+            )))
             .unwrap();
 
-        let perf_key = window_layouting.push_gui_container(Box::new(PerformanceMonitor::new())).unwrap();
+        let perf_key = window_layouting
+            .push_gui_container(Box::new(PerformanceMonitor::new()))
+            .unwrap();
 
         let tab_1 = window_layouting.create_tab(vec![c1_key, c2_key]);
         let tab_2 = window_layouting.create_tab(vec![c2_key, c3_key, c1_key]);
@@ -98,16 +109,18 @@ impl GUISystem {
             .create_single_layout_element(perf_tab)
             .unwrap();
 
-        let center_vertical = window_layouting.create_vertical_layout_element(vec![
-            DividedElement {
-                layout_key: single_1,
-                size: 3.0,
-            },
-            DividedElement {
-                layout_key: single_perf,
-                size: 1.0,
-            },
-        ]).unwrap();
+        let center_vertical = window_layouting
+            .create_vertical_layout_element(vec![
+                DividedElement {
+                    layout_key: single_1,
+                    size: 3.0,
+                },
+                DividedElement {
+                    layout_key: single_perf,
+                    size: 1.0,
+                },
+            ])
+            .unwrap();
 
         let horizontal_1 = window_layouting
             .create_horizontal_layout_element(vec![
@@ -182,17 +195,13 @@ impl GUISystem {
         }
     }
 
-    pub fn handle_event(
-        &mut self,
-        event: &mut UIEvent,
-        public_data: &mut PublicData,
-    ) {
+    pub fn handle_event(&mut self, event: &mut UIEvent, public_data: &mut PublicData) {
         // Handle Any event FGUI
         match event {
             UIEvent::Resize(new_size) => {
                 self.resize(*new_size);
-            },
-            _=>{}
+            }
+            _ => {}
         }
         self.window_layouting.handle_event(event, public_data)
     }
@@ -212,7 +221,7 @@ impl GUISystem {
         engine: &Engine,
         gui_rects: &mut GUIRects,
         encoder: &mut rwge::wgpu::CommandEncoder,
-        public_data: &mut PublicData
+        public_data: &mut PublicData,
     ) {
         gui_rects.rect_collection.clear_buffers();
         {

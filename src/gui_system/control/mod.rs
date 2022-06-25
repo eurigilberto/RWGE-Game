@@ -130,16 +130,16 @@ impl ControlState {
     }
 
     /// Returns true if the element is hot now
-    pub fn update_hot_with_rect(&mut self, id: Uiid, control_rect: &Rect) -> bool {
+    pub fn set_hot_with_rect(&mut self, id: Uiid, control_rect: &Rect) -> bool {
         if let Some(cursor_pos) = self.last_cursor_position {
             if control_rect.inside_rect(cursor_pos) {
                 self.set_hot(id)
             } else {
-                self.unset_hovered(id);
+                //self.unset_hovered(id);
                 false
             }
         } else {
-            self.unset_hovered(id);
+            //self.unset_hovered(id);
             false
         }
     }
@@ -246,5 +246,13 @@ impl ControlState {
         if !self.hold_hover {
             self.hovered = None;
         }
+    }
+}
+
+pub fn get_current_control_id(ui_id: Uiid, active_id: &Option<Uuid>)->ControlId{
+    if let Some(active_id) = active_id {
+        ControlId::Active(*active_id)
+    }else{
+        ControlId::Control(ui_id)
     }
 }

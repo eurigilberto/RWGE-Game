@@ -82,7 +82,7 @@ impl TabsContainer {
                 };
                 let mouse_test_rect = btn_rect.combine_rects(rect_mask);
                 if let Some(rect_mask) = mouse_test_rect {
-                    control_state.update_hot_with_rect(control_id, &rect_mask);
+                    control_state.set_hot_with_rect(control_id, &rect_mask);
                 }
             }
             UIEvent::Render {

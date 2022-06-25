@@ -262,7 +262,7 @@ impl LayoutElement {
                             control_state.hold_active_state(active_div.active_id);
                         }
                     } else {
-                        control_state.update_hot_with_rect(control_id, &r_mask.into());
+                        control_state.set_hot_with_rect(control_id, &r_mask.into());
                     }
                 }
                 UIEvent::MouseMove { corrected, .. } => {

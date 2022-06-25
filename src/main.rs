@@ -53,7 +53,7 @@ impl Game {
             &engine.system_bind_group_layout,
             size,
             &mut render_texture_slotmap,
-            1024
+            4000
         );
         let gui_system = GUISystem::new(size);
 
