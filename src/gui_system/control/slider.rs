@@ -2,8 +2,8 @@ use rwge::{
     color::RGBA,
     glam::{vec2, Vec2},
     gui::rect_ui::{
-        element::{builder::ElementBuilder, Border, LinearGradient},
-        event::{MouseInput, UIEvent},
+        element::{builder::ElementBuilder, LinearGradient},
+        event::{ UIEvent},
         BorderRadius, Rect,
     },
     math_utils::lerp_f32,
@@ -11,10 +11,6 @@ use rwge::{
 };
 
 use super::{ControlState, State, ControlId, get_current_control_id};
-
-pub struct SliderDrag {
-    active_id: Uuid,
-}
 
 pub fn inv_lerp(a: f32, b: f32, t: f32) -> f32 {
     (t - a) / (b - a)
@@ -81,7 +77,7 @@ pub fn slider(
         }
         UIEvent::Render {
             gui_rects,
-            extra_render_steps,
+            ..
         } => {
             let bg_position = rect.position;
             let bg_size = vec2(rect.size.x, SLIDER_CONTROL_BG_HEIGHT);

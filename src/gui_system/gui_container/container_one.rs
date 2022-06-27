@@ -2,17 +2,17 @@ use std::collections::HashMap;
 
 use rwge::{
     color::RGBA,
-    glam::{vec2, UVec2, Vec2},
+    glam::{vec2, Vec2},
     gui::rect_ui::{
         element::{
-            builder::ElementBuilder, push_radial_gradient, Border, LinearGradient, RadialGradient,
+            builder::ElementBuilder, Border, LinearGradient, RadialGradient,
         },
         event::UIEvent,
-        BorderRadius, ExtraBufferData, Rect,
+        BorderRadius, Rect,
     },
     math_utils::{lerp_f32, lerp_vec2},
     uuid::Uuid,
-    Engine,
+    
 };
 
 use crate::{
@@ -21,7 +21,7 @@ use crate::{
         window_layout::GUI_ACTIVE_COLOR,
         ContainerInfo,
     },
-    public_data::{self, utils::get_engine_data, EngineData, PublicData},
+    public_data::{ utils::get_engine_data, PublicData},
 };
 
 use super::{render_container_background, GUIContainer};
@@ -323,7 +323,7 @@ impl GUIContainer for ContainerOne {
 
             if let UIEvent::Render {
                 gui_rects,
-                extra_render_steps,
+                ..
             } = event
             {
                 let ref anim_data = self

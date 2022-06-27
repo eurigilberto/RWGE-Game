@@ -29,8 +29,7 @@ pub enum ControlId {
     Control(Uiid),
 }
 
-use rwge::glam::{vec2, Vec2};
-use rwge::gui::rect_ui::event::UIEvent;
+use rwge::glam::{Vec2};
 use rwge::gui::rect_ui::Rect;
 use rwge::uuid::Uuid;
 
@@ -91,16 +90,6 @@ impl ControlState {
             }
         }
         return false;
-    }
-
-    fn unset_hovered(&mut self, id: Uiid) -> bool {
-        if let Some(hovered) = self.hovered {
-            if hovered == id {
-                self.hovered = None;
-                return true
-            }
-        }
-        return false
     }
 
     pub fn set_depth(&mut self, depth: u32) {
