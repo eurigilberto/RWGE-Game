@@ -167,6 +167,13 @@ impl ControlState {
         }
     }
 
+    pub fn is_hovered(&self, id: Uiid)->bool{
+        match self.get_control_state(id.into()) {
+            State::Hovered => true,
+            _ => false,
+        }
+    }
+
     pub fn set_active(&mut self, id: Uiid) -> Option<Uuid> {
         if let Some(hovered) = self.hovered {
             if self.active.is_nil() && hovered == id {

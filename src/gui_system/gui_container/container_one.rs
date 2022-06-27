@@ -4,7 +4,9 @@ use rwge::{
     color::RGBA,
     glam::{vec2, UVec2, Vec2},
     gui::rect_ui::{
-        element::{builder::ElementBuilder, LinearGradient, RadialGradient, push_radial_gradient}, event::UIEvent, BorderRadius, ExtraBufferData, Rect,
+        element::{builder::ElementBuilder, push_radial_gradient, LinearGradient, RadialGradient},
+        event::UIEvent,
+        BorderRadius, ExtraBufferData, Rect,
     },
     math_utils::{lerp_f32, lerp_vec2},
     uuid::Uuid,
@@ -25,6 +27,7 @@ use super::{render_container_background, GUIContainer};
 struct BoxData {
     pub box_size: f32,
     pub boxes_data: Vec<Vec2>,
+    pub box_color: Vec<RGBA>,
 }
 
 struct InstanceAnimData {
@@ -121,7 +124,7 @@ impl GUIContainer for ContainerOne {
                         if slider_active_id.is_none() {
                             self.slider_active_id = None
                         }
-                    }else if self.slider_active_id.is_none(){
+                    } else if self.slider_active_id.is_none() {
                         if slider_active_id.is_some() {
                             self.slider_active_id = slider_active_id;
                             self.slider_instance = instance_index;
@@ -129,8 +132,6 @@ impl GUIContainer for ContainerOne {
                     }
                     //println!("---- Setting up slider for instance {instance_index} -- active status {}", slider_active_id.is_some());
                 }
-
-                
 
                 position -= vec2(0.0, slider_size.y + CONTAINER_MARGIN);
             }
@@ -146,6 +147,25 @@ impl GUIContainer for ContainerOne {
                 *control = control_state.get_id();
             }
 
+            if let UIEvent::MouseButton(mouse_input) = event {
+                if mouse_input.is_left_pressed() {
+                    for (index, control) in controls.iter().enumerate() {
+                        let state = control_state.get_control_state((*control).into());
+                        if let State::Hovered = state {
+                            self.instance_anim_data
+                                .get_mut(&instance_index)
+                                .unwrap()
+                                .current_values
+                                .box_color[index] = RGBA::rgb(
+                                rwge::rand::random(),
+                                rwge::rand::random(),
+                                rwge::rand::random(),
+                            );
+                        }
+                    }
+                }
+            }
+
             if let UIEvent::Update = event {
                 if let Some(anim_data) = self.instance_anim_data.get_mut(&instance_index) {
                     //Update animation values
@@ -159,8 +179,12 @@ impl GUIContainer for ContainerOne {
                     let required_rect_size = (allowed_horizontal_size / horizontal_rect_count)
                         .max(GRID_RECT_SIZE + GRID_RECT_PADDING);
 
-                    let v_scaler = ((container_info.rect.size.x - 2.0 * GRID_MARGIN - GRID_RECT_SIZE) / (self.value.max(0.1))).min(1.0);
-                    let start_position = position + vec2(GRID_MARGIN + self.value*0.5 * v_scaler, -GRID_MARGIN);
+                    let v_scaler =
+                        ((container_info.rect.size.x - 2.0 * GRID_MARGIN - GRID_RECT_SIZE)
+                            / (self.value.max(0.1)))
+                        .min(1.0);
+                    let start_position =
+                        position + vec2(GRID_MARGIN + self.value * 0.5 * v_scaler, -GRID_MARGIN);
 
                     let horizontal_rect_count = horizontal_rect_count as u32;
                     let size_padded = required_rect_size;
@@ -196,11 +220,13 @@ impl GUIContainer for ContainerOne {
                     let current = BoxData {
                         box_size: 0.0,
                         boxes_data: vec![position; self.count as usize],
+                        box_color: vec![self.color; self.count as usize],
                     };
 
                     let target = BoxData {
                         box_size: 0.0,
                         boxes_data: vec![position; self.count as usize],
+                        box_color: vec![self.color; self.count as usize],
                     };
 
                     self.instance_anim_data.insert(
@@ -231,19 +257,19 @@ impl GUIContainer for ContainerOne {
                     let size_elem_anim =
                         lerp_f32(anim_data.box_size * 0.5, anim_data.box_size, scaler_param);
 
-                    let rect_size = vec2(size_elem_anim, size_elem_anim);
+                    let rect_size = if control_state.is_hovered(control_id) {
+                        vec2(anim_data.box_size, anim_data.box_size)
+                    } else {
+                        vec2(size_elem_anim, size_elem_anim)
+                    };
                     let control_rect = Rect {
                         position: *position,
                         size: rect_size,
                     };
 
-                    if let Some(combined_rect) = control_rect.combine_rects(&container_info.rect){
-                        control_state.set_hot_with_rect(
-                            control_id,
-                            &combined_rect,
-                        );
+                    if let Some(combined_rect) = control_rect.combine_rects(&container_info.rect) {
+                        control_state.set_hot_with_rect(control_id, &combined_rect);
                     }
-                    
                 }
             }
 
@@ -257,7 +283,12 @@ impl GUIContainer for ContainerOne {
                     .get(&instance_index)
                     .unwrap()
                     .current_values;
-                for (index, position) in anim_data.boxes_data.iter().enumerate() {
+                for (index, (position, color)) in anim_data
+                    .boxes_data
+                    .iter()
+                    .zip(&anim_data.box_color)
+                    .enumerate()
+                {
                     let control_id = controls[index];
 
                     let i = index as u32;
@@ -268,45 +299,55 @@ impl GUIContainer for ContainerOne {
                         + 0.5;
                     let size_elem_anim =
                         lerp_f32(anim_data.box_size * 0.5, anim_data.box_size, scaler_param);
-                    let roundness = if i % 10 == 0 {lerp_f32(1.0, 15.0, scaler_param)} else {5.0};
-                    let box_color = if let State::Hovered =
-                        control_state.get_control_state(control_id.into())
-                    {
-                        RGBA::WHITE
+                    let roundness = if i % 10 == 0 {
+                        lerp_f32(1.0, 15.0, scaler_param)
                     } else {
-                        self.color
+                        5.0
+                    };
+                    let box_color = if control_state.is_hovered(control_id)
+                    {
+                        *color * 2.0
+                    } else {
+                        *color
                     };
 
-                    let rect_size = vec2(size_elem_anim, size_elem_anim);
+                    let rect_size = if control_state.is_hovered(control_id) {
+                        vec2(anim_data.box_size, anim_data.box_size)
+                    } else {
+                        vec2(size_elem_anim, size_elem_anim)
+                    };
+
                     let mut element_builder = ElementBuilder::new(*position, rect_size)
                         .set_color(box_color.into())
                         .set_rect_mask(container_info.rect.into())
                         .set_round_rect(BorderRadius::ForAll(roundness).into());
-                    
-                    let linear_gradient = LinearGradient{
+
+                    let linear_gradient = LinearGradient {
                         colors: [box_color, box_color * 0.5],
                         start_position: vec2(0.0, rect_size.y * 0.5),
                         end_position: vec2(0.0, -rect_size.y * 0.5),
                     };
 
-                    let radial_gradient = RadialGradient{
+                    let radial_gradient = RadialGradient {
                         colors: [box_color, box_color * 0.5],
                         center_position: Vec2::ZERO,
                         end_radius: rect_size.x * 0.702,
                         start_radius: 0.0,
                     };
-                    
-                    if i % 2 == 0 {
+
+                    if i % 2 == 0 && !control_state.is_hovered(control_id) {
                         element_builder = element_builder.set_rotation(
                             get_engine_data(public_data).time.time * (2.0 + (i % 7) as f32),
                         );
                     }
 
                     if i % 4 == 0 {
-                        element_builder = element_builder.set_linear_gradient(linear_gradient.into());
+                        element_builder =
+                            element_builder.set_linear_gradient(linear_gradient.into());
                     }
                     if i % 5 == 0 || i % 5 == 4 {
-                        element_builder = element_builder.set_radial_gradient(radial_gradient.into());
+                        element_builder =
+                            element_builder.set_radial_gradient(radial_gradient.into());
                     }
 
                     element_builder.build(gui_rects);

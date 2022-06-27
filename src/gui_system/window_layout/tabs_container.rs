@@ -19,7 +19,7 @@ use crate::{
         gui_container::GUIContainer,
         ContainerInfo,
     },
-    public_data::{self, EngineData, PublicData},
+    public_data::{self, EngineData, PublicData, utils::get_engine_data},
 };
 
 use super::{GUIContainerInfo, GUIContainerSlotkey, SHADOW_DEPTH_OFFSET};
@@ -59,6 +59,7 @@ impl TabsContainer {
         mut size: Vec2,
         rect_mask: &Rect,
         is_active_tab: bool,
+        public_data: &PublicData
     ) -> bool {
         let control_id = control_state.get_id();
 
@@ -69,7 +70,8 @@ impl TabsContainer {
                     state: ElementState::Pressed,
                 } = mouse_input
                 {
-                    if let State::Hovered = control_state.get_control_state(control_id.into()) {
+                    
+                    if control_state.is_hovered(control_id) {
                         return true;
                     }
                 }
@@ -100,9 +102,12 @@ impl TabsContainer {
                         GUI_ACTIVE_COLOR,
                     )
                 } else {
+                    let red = get_engine_data(public_data).time.sin_time(10.0) * 0.5 + 0.5;
+                    let green = get_engine_data(public_data).time.sin_time(5.0) * 0.5 + 0.5;
+                    let blue = get_engine_data(public_data).time.sin_time(3.0) * 0.5 + 0.5;
                     (
                         BorderRadius::ForAll(size.y * 0.5 - TAB_GAP),
-                        GUI_INACTIVE_COLOR,
+                        RGBA::rgb(red, green, blue) //GUI_INACTIVE_COLOR,
                     )
                 };
 
@@ -130,6 +135,7 @@ impl TabsContainer {
         control_state: &mut ControlState,
         container_info: &ContainerInfo,
         event: &mut UIEvent,
+        public_data: &PublicData
     ) {
         let tab_menu_size = vec2(container_info.rect.size.x, TAB_SIZE);
         let tab_menu_position = vec2(
@@ -157,6 +163,7 @@ impl TabsContainer {
                 tab_btn_size,
                 &rect_mask,
                 index == self.active_tab,
+                public_data
             ) {
                 self.active_tab = index;
             }
@@ -274,7 +281,7 @@ impl TabsContainer {
             },
         };
 
-        self.create_tab_buttons(control_state, &container_info, event);
+        self.create_tab_buttons(control_state, &container_info, event, public_data);
         gui_container
     }
 }
