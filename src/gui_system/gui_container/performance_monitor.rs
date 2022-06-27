@@ -2,9 +2,9 @@ use rwge::{
     color::RGBA,
     glam::vec2,
     gui::rect_ui::{
-        element::{builder::ElementBuilder, Border},
+        element::{builder::ElementBuilder, Border, Element},
         BorderRadius,
-    },
+    }, font::{font_load_gpu::FontCollection, font_layout::create_font_layout},
 };
 
 use crate::{public_data::{utils::get_engine_data, PublicData}, gui_system::gui_container::render_container_background};
@@ -122,10 +122,42 @@ impl GUIContainer for PerformanceMonitor {
                     }))
                     .build(gui_rects);
 
-                /*for frame_avg in frame_averages {
-                    let height_proportion = frame_avg / max_frame_avg;
-                    let column_height = COLUMN_HEIGHT * height_proportion;
-                }*/
+                let font_collections = &public_data.collection.get::<Vec<FontCollection>>().unwrap()[0];
+                let text_layout = create_font_layout("Euri gjiIytf", font_collections, 1);
+                for text_elem in text_layout {
+                    let t_pos = top_left_box_pos + text_elem.position + vec2(0.0, -64.0);
+                    let t_size = text_elem.size;
+
+                    ElementBuilder::new(t_pos, t_size)
+                        .set_sdffont(text_elem.tx_slice.into())
+                        .set_color(text_elem.color.into())
+                        .set_rect_mask(container_info.rect.into())
+                        .build(gui_rects);
+                }
+
+                let text_layout = create_font_layout("Euri gjiIytf", font_collections, 0);
+                for text_elem in text_layout {
+                    let t_pos = top_left_box_pos + text_elem.position + vec2(0.0, -120.0);
+                    let t_size = text_elem.size;
+
+                    ElementBuilder::new(t_pos, t_size)
+                        .set_sdffont(text_elem.tx_slice.into())
+                        .set_color(text_elem.color.into())
+                        .set_rect_mask(container_info.rect.into())
+                        .build(gui_rects);
+                }
+
+                let text_layout = create_font_layout("Euri gjiIytf", font_collections, 2);
+                for text_elem in text_layout {
+                    let t_pos = top_left_box_pos + text_elem.position + vec2(0.0, -180.0);
+                    let t_size = text_elem.size;
+
+                    ElementBuilder::new(t_pos, t_size)
+                        .set_sdffont(text_elem.tx_slice.into())
+                        .set_color(text_elem.color.into())
+                        .set_rect_mask(container_info.rect.into())
+                        .build(gui_rects);
+                }
             }
             _ => {}
         }

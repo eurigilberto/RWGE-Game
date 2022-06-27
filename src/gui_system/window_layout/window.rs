@@ -130,7 +130,7 @@ pub fn resize_controls(
             }
             UIEvent::MouseMove { raw, .. } => {
                 if let Some(drag_resize) = active_id {
-                    let new_size = *raw;
+                    let new_size = (*raw).max(vec2(100.0, 100.0));
                     drag_resize.update_size(new_size);
                 }
             }

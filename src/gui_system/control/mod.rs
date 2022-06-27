@@ -104,8 +104,8 @@ impl ControlState {
     }
 
     pub fn set_depth(&mut self, depth: u32) {
-        let current_id = &mut self
-            .current_ui_id
+        let current_id = self
+            .current_ui_id.as_mut()
             .expect("GUI Control state was not initialized properly");
         current_id.depth = depth;
     }

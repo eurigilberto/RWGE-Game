@@ -75,6 +75,11 @@ impl Game {
         )
         .unwrap();
 
+        let mut font_collections = Vec::new();
+        font_collections.push(font_slices);
+
+        public_data.collection.insert(font_collections);
+
         let gui_copy_texture_surface =
             create_gui_copy_texture_to_surface(&mut public_data, &gui_rects, engine);
 

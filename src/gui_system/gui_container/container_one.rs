@@ -4,7 +4,9 @@ use rwge::{
     color::RGBA,
     glam::{vec2, UVec2, Vec2},
     gui::rect_ui::{
-        element::{builder::ElementBuilder, push_radial_gradient, LinearGradient, RadialGradient},
+        element::{
+            builder::ElementBuilder, push_radial_gradient, Border, LinearGradient, RadialGradient,
+        },
         event::UIEvent,
         BorderRadius, ExtraBufferData, Rect,
     },
@@ -15,7 +17,7 @@ use rwge::{
 
 use crate::{
     gui_system::{
-        control::{slider, ControlState, State, Uiid},
+        control::{slider, ControlId, ControlState, State, Uiid},
         window_layout::GUI_ACTIVE_COLOR,
         ContainerInfo,
     },
@@ -30,9 +32,12 @@ struct BoxData {
     pub box_color: Vec<RGBA>,
 }
 
-struct InstanceAnimData {
+struct InstanceData {
     pub current_values: BoxData,
     pub target_values: BoxData,
+    pub multi_select_active_id: Option<Uuid>,
+    pub start_position: Vec2,
+    pub end_position: Vec2,
 }
 
 pub struct ContainerOne {
@@ -43,7 +48,7 @@ pub struct ContainerOne {
 
     slider_instance: usize,
     slider_active_id: Option<Uuid>,
-    instance_anim_data: HashMap<usize, InstanceAnimData>,
+    instance_anim_data: HashMap<usize, InstanceData>,
 }
 
 impl ContainerOne {
@@ -85,6 +90,47 @@ impl GUIContainer for ContainerOne {
 
         {
             let mut position = container_info.get_top_left_position();
+
+            {
+                let background_control = control_state.get_id();
+                if let UIEvent::Update = event {
+                    if let Some(data) = self.instance_anim_data.get(&instance_index) {
+                        if data.multi_select_active_id.is_some() {
+                            control_state.hold_active_state(data.multi_select_active_id.unwrap());
+                        } else {
+                            control_state
+                                .set_hot_with_rect(background_control, &container_info.rect);
+                        }
+                    }
+                    //println!("Current depth {}", control_state.get_current_depth());
+                }
+
+                if let UIEvent::MouseButton(mouse_input) = event {
+                    if mouse_input.is_left_pressed() {
+                        if let Some(data) = self.instance_anim_data.get_mut(&instance_index) {
+                            data.multi_select_active_id =
+                                control_state.set_active(background_control);
+                            if data.multi_select_active_id.is_some() {
+                                data.start_position = control_state.last_cursor_position.unwrap();
+                                data.end_position = data.start_position;
+                            }
+                        }
+                    }
+                    if mouse_input.is_left_released() {
+                        if let Some(data) = self.instance_anim_data.get_mut(&instance_index) {
+                            data.multi_select_active_id = None;
+                        }
+                    }
+                }
+
+                if let UIEvent::MouseMove { corrected, .. } = event {
+                    if let Some(data) = self.instance_anim_data.get_mut(&instance_index) {
+                        if data.multi_select_active_id.is_some() {
+                            data.end_position = *corrected;
+                        }
+                    }
+                }
+            }
 
             {
                 //render slider
@@ -130,7 +176,6 @@ impl GUIContainer for ContainerOne {
                             self.slider_instance = instance_index;
                         }
                     }
-                    //println!("---- Setting up slider for instance {instance_index} -- active status {}", slider_active_id.is_some());
                 }
 
                 position -= vec2(0.0, slider_size.y + CONTAINER_MARGIN);
@@ -231,9 +276,12 @@ impl GUIContainer for ContainerOne {
 
                     self.instance_anim_data.insert(
                         instance_index,
-                        InstanceAnimData {
+                        InstanceData {
                             current_values: current,
                             target_values: target,
+                            multi_select_active_id: None,
+                            start_position: Vec2::ZERO,
+                            end_position: Vec2::ZERO,
                         },
                     );
                 }
@@ -304,8 +352,7 @@ impl GUIContainer for ContainerOne {
                     } else {
                         5.0
                     };
-                    let box_color = if control_state.is_hovered(control_id)
-                    {
+                    let box_color = if control_state.is_hovered(control_id) {
                         *color * 2.0
                     } else {
                         *color
@@ -351,6 +398,30 @@ impl GUIContainer for ContainerOne {
                     }
 
                     element_builder.build(gui_rects);
+                }
+            }
+
+            if let UIEvent::Render { gui_rects, .. } = event {
+                if let Some(data) = self.instance_anim_data.get_mut(&instance_index) {
+                    if data.multi_select_active_id.is_some() {
+                        let state = control_state.get_control_state(ControlId::Active(
+                            data.multi_select_active_id.unwrap(),
+                        ));
+                        if let State::Active = state {
+                            let center_pos =
+                                lerp_vec2(data.start_position, data.end_position, vec2(0.5, 0.5));
+                            let size = Vec2::abs((data.start_position - center_pos) * 2.0);
+
+                            ElementBuilder::new(center_pos, size)
+                                .set_color(RGBA::GREEN.set_alpha(0.25).into())
+                                .set_border(Some(Border {
+                                    size: 2,
+                                    color: RGBA::GREEN.set_alpha(0.5).into(),
+                                }))
+                                .set_rect_mask(container_info.rect.into())
+                                .build(gui_rects);
+                        }
+                    }
                 }
             }
         }
