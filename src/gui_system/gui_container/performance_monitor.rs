@@ -205,11 +205,12 @@ fn render_unbounded_horizontal_text(
         create_font_layout(text, font_size, font_collection, collection_index);
     let top_left_pos = top_left_pos + vec2(0.0, -rect.size.y);
     for text_elem in text_layout {
-        let t_pos = top_left_pos + text_elem.position;
-        let t_size = text_elem.size;
-
+        let rect = Rect{
+            position: top_left_pos + text_elem.rect.position,
+            size: text_elem.rect.size
+        };
         let char_builder =
-            ElementBuilder::new(t_pos, t_size).set_sdffont(text_elem.tx_slice.into());
+            ElementBuilder::new_with_rect(rect).set_sdffont(text_elem.tx_slice.into());
         render_char(char_builder).build(gui_rects);
     }
 

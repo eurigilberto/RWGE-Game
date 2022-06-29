@@ -96,10 +96,10 @@ pub mod utils {
         glam::UVec2,
         render_system::render_texture::RenderTexture,
         slotmap::slotmap::{SlotKey, Slotmap},
-        winit, Engine,
+        winit, Engine, font::font_load_gpu::FontCollection,
     };
 
-    use super::{EngineData, PublicData};
+    use super::{EngineData, PublicData, EngineTimeData};
 
     /// Panic! if `RenderTextureSlotmap` is not present on the `PublicData` collection
     pub fn get_render_texture<'a>(
@@ -128,6 +128,14 @@ pub mod utils {
     /// Panic! if `EngineData` is not present on the `PublicData` collection
     pub fn get_engine_data(public_data: &PublicData) -> &EngineData {
         public_data.collection.get().unwrap()
+    }
+
+    pub fn get_time(public_data: &PublicData) -> &EngineTimeData {
+        &public_data.collection.get::<EngineData>().unwrap().time
+    }
+
+    pub fn get_font_collections(public_data: &PublicData) -> &Vec<FontCollection> {
+        &public_data.collection.get::<Vec<FontCollection>>().unwrap()
     }
 
     pub fn get_window(public_data: &PublicData) -> &winit::window::Window {

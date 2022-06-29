@@ -60,6 +60,8 @@ impl GUISystem {
 
         let mut window_layouting = WindowSystem::new();
 
+        const ELLIPSIS: char = '…';
+
         let c1_key = window_layouting
             .push_gui_container(Box::new(ContainerOne::new(
                 String::from("Wind C1"),

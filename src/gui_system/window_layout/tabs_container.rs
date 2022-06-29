@@ -2,11 +2,12 @@ use std::{cell::RefCell, sync::Arc};
 
 use rwge::{
     color::{HSLA, RGBA},
+    font::font_layout::create_font_layout,
     glam::{vec2, Vec2},
     gui::rect_ui::{
-        element::{builder::ElementBuilder, LinearGradient, Border},
+        element::{builder::ElementBuilder, Border, LinearGradient},
         event::{MouseInput, UIEvent},
-        BorderRadius, Rect,
+        BorderRadius, GUIRects, Rect,
     },
     math_utils::lerp_f32,
     slotmap::slotmap::Slotmap,
@@ -19,13 +20,16 @@ use crate::{
         gui_container::GUIContainer,
         ContainerInfo,
     },
-    public_data::{utils::get_engine_data, PublicData},
+    public_data::{
+        utils::{get_engine_data, get_font_collections, get_time},
+        PublicData,
+    },
 };
 
 use super::{depth_offset, GUIContainerInfo, GUIContainerSlotkey};
 
 pub struct TabsContainer {
-    tabs: Vec<GUIContainerSlotkey>,
+    pub tabs: Vec<GUIContainerSlotkey>,
     active_tab: usize,
 }
 
@@ -55,97 +59,99 @@ impl TabsContainer {
     pub fn tab_button(
         control_state: &mut ControlState,
         event: &mut UIEvent,
-        mut position: Vec2,
-        mut size: Vec2,
+        mut rect: Rect,
         rect_mask: &Rect,
         is_active_tab: bool,
         public_data: &PublicData,
+        tab_name: &str,
     ) -> bool {
         let control_id = control_state.get_id();
 
-        match event {
-            UIEvent::MouseButton(mouse_input) => {
-                if let MouseInput {
-                    button: MouseButton::Left,
-                    state: ElementState::Pressed,
-                } = mouse_input
-                {
-                    if control_state.is_hovered(control_id) {
-                        return true;
-                    }
+        if let UIEvent::MouseButton(mouse_input) = event {
+            if mouse_input.is_left_pressed() {
+                if control_state.is_hovered(control_id) {
+                    return true;
                 }
             }
-            UIEvent::MouseMove { corrected, raw } => {}
-            UIEvent::Update => {
-                let btn_rect = Rect {
-                    position: position,
-                    size: size,
-                };
-                let mouse_test_rect = btn_rect.combine_rects(rect_mask);
-                if let Some(rect_mask) = mouse_test_rect {
-                    control_state.set_hot_with_rect(control_id, &rect_mask);
-                }
+        }
+
+        if let UIEvent::Update = event {
+            let mouse_test_rect = rect.combine_rects(rect_mask);
+            if let Some(rect_mask) = mouse_test_rect {
+                control_state.set_hot_with_rect(control_id, &rect_mask);
             }
-            UIEvent::Render {
-                gui_rects,
-                extra_render_steps,
-            } => {
-                let (round_rect, color) = if is_active_tab {
-                    position -= vec2(0.0, TAB_GAP * 0.5);
-                    size += vec2(0.0, TAB_GAP);
-                    (
-                        BorderRadius::ForTopBottom {
-                            top: size.y * 0.5 - TAB_GAP,
-                            bottom: 0.0,
-                        },
-                        GUI_ACTIVE_COLOR,
-                    )
-                } else {
-                    (
-                        BorderRadius::ForAll(size.y * 0.5 - 2.0),
-                        GUI_INACTIVE_COLOR,
-                    )
-                };
+        }
 
-                let state = control_state.get_control_state(control_id.into());
-                let btn_color = if let State::Hovered = state {
-                    let color_interp = get_engine_data(public_data).time.sin_time(0.5) * 0.5 + 0.5;
-                    let color : RGBA = HSLA{
-                        h: color_interp * 360.0,
-                        s: 0.5,
-                        l: 0.5,
-                        a: 1.0,
-                    }.into();
-                    color
-                } else {
-                    color
-                };
+        if let UIEvent::Render {
+            gui_rects,..
+        } = event
+        {
+            let (round_rect, color) = if is_active_tab {
+                rect = rect
+                    .offset_position(-vec2(0.0, TAB_GAP * 0.5))
+                    .offset_size(vec2(0.0, TAB_GAP));
+                (
+                    BorderRadius::ForTopBottom {
+                        top: rect.size.y * 0.5 - TAB_GAP,
+                        bottom: 0.0,
+                    },
+                    GUI_ACTIVE_COLOR,
+                )
+            } else {
+                (
+                    BorderRadius::ForAll(rect.size.y * 0.5 - 2.0),
+                    GUI_INACTIVE_COLOR,
+                )
+            };
 
-                let elem_build =
-                    ElementBuilder::new(position, size).set_round_rect(round_rect.into());
-                if is_active_tab {
-                    let lin_gradient = LinearGradient {
-                        colors: [RGBA::rrr1(0.10), color],
-                        start_position: vec2(0.0, size.y * 0.5),
-                        end_position: vec2(0.0, size.y * 0.5 - 6.0),
-                    };
-                    elem_build.set_linear_gradient(lin_gradient.into())
-                } else {
-                    let lin_gradient = LinearGradient {
-                        colors: [GUI_INACTIVE_COLOR * 1.5, btn_color],
-                        start_position: vec2(size.x * 0.5, 0.0),
-                        end_position: vec2(-size.x * 0.5, 0.0),
-                    };
-                    elem_build.set_linear_gradient(lin_gradient.into())/*.set_border(Some(Border{
-                        size: 2,
-                        color: RGBA::BLACK.set_alpha(0.25).into(),
-                    }))*/
+            let state = control_state.get_control_state(control_id.into());
+            let btn_color = if let State::Hovered = state {
+                let color_interp = get_time(public_data).sin_time(0.5) * 0.5 + 0.5;
+                let color: RGBA = HSLA {
+                    h: color_interp * 360.0,
+                    s: 0.5,
+                    l: 0.5,
+                    a: 1.0,
                 }
+                .into();
+                color
+            } else {
+                color
+            };
+
+            let elem_build = ElementBuilder::new_with_rect(rect).set_round_rect(round_rect.into());
+            if is_active_tab {
+                let lin_gradient = LinearGradient {
+                    colors: [RGBA::rrr1(0.10), color],
+                    start_position: vec2(0.0, rect.size.y * 0.5),
+                    end_position: vec2(0.0, rect.size.y * 0.5 - 6.0),
+                };
+                elem_build.set_linear_gradient(lin_gradient.into())
+            } else {
+                let lin_gradient = LinearGradient {
+                    colors: [GUI_INACTIVE_COLOR * 1.5, btn_color],
+                    start_position: vec2(rect.size.x * 0.5, 0.0),
+                    end_position: vec2(-rect.size.x * 0.5, 0.0),
+                };
+                elem_build.set_linear_gradient(lin_gradient.into())
+            }
+            .set_rect_mask((*rect_mask).into())
+            .build(gui_rects);
+
+            let font_collection = &get_font_collections(public_data)[0];
+            let (font_elements, mut text_rect) =
+                create_font_layout(tab_name, 16.0, font_collection, 2);
+
+            for font_elem in font_elements {
+                ElementBuilder::new_with_rect(
+                    font_elem
+                        .rect
+                        .offset_position(rect.position - text_rect.size * 0.5),
+                )
                 .set_rect_mask((*rect_mask).into())
+                .set_sdffont(font_elem.tx_slice.into())
                 .build(gui_rects);
             }
-            UIEvent::Consumed => {},
-            _ => {}
         }
         return false;
     }
@@ -156,34 +162,31 @@ impl TabsContainer {
         container_info: &ContainerInfo,
         event: &mut UIEvent,
         public_data: &PublicData,
+        tab_rect: Rect,
+        tab_names: &Vec<&str>,
     ) {
-        let tab_menu_size = vec2(container_info.rect.size.x, TAB_SIZE);
-        let tab_menu_position = vec2(
-            container_info.rect.position.x,
-            container_info.rect.position.y + (container_info.rect.size.y - TAB_SIZE) * 0.5,
-        );
 
-        let rect_mask = Rect {
-            position: tab_menu_position,
-            size: tab_menu_size,
-        };
-
-        let left_position = tab_menu_position - vec2(tab_menu_size.x * 0.5, 0.0);
-        let mut current_pos = left_position;
+        let mut current_pos = tab_rect.get_left_position();
 
         for index in 0..self.tabs.len() {
             let tab_btn_pos = current_pos + vec2(TAB_GAP + TAB_WIDTH * 0.5, 0.0);
-            let tab_btn_size = vec2(TAB_WIDTH, tab_menu_size.y - TAB_GAP * 2.0);
+            let tab_btn_size = vec2(TAB_WIDTH, tab_rect.size.y - TAB_GAP * 2.0);
+            
+            let rect = Rect{
+                position: tab_btn_pos,
+                size: tab_btn_size,
+            };
+            
             current_pos += vec2(TAB_GAP + TAB_WIDTH, 0.0);
 
             if Self::tab_button(
                 control_state,
                 event,
-                tab_btn_pos,
-                tab_btn_size,
-                &rect_mask,
+                rect,
+                &tab_rect,
                 index == self.active_tab,
                 public_data,
+                &tab_names[index],
             ) {
                 self.active_tab = index;
             }
@@ -195,9 +198,8 @@ impl TabsContainer {
         event: &mut UIEvent,
         public_data: &PublicData,
         container_info: ContainerInfo,
-        gui_container_collection: &Slotmap<Box<dyn GUIContainer>>,
         control_state: &mut ControlState,
-        instance_index: usize,
+        tab_names: &Vec<&str>,
     ) -> GUIContainerInfo {
         let active_tab_key = self.tabs[self.active_tab];
 
@@ -216,80 +218,36 @@ impl TabsContainer {
             container_info.rect.position.y + (container_info.rect.size.y - TAB_SIZE) * 0.5,
         );
 
-        match event {
-            UIEvent::Render {
-                gui_rects,
-                extra_render_steps,
-            } => {
-                let color: RGBA = TAB_BG_COLOR.into();
-
-                ElementBuilder::new(tab_menu_position, tab_menu_size)
-                    .set_color(color.into())
-                    .build(gui_rects);
-
-                let lin_gradient = LinearGradient {
-                    colors: [RGBA::rrr1(0.10), RGBA::rrr1(0.10).set_alpha(0.0)],
-                    start_position: vec2(0.0, 3.0),
-                    end_position: vec2(0.0, -3.0),
-                };
-
-                let container_top_left = container_info.get_top_left_position();
-
-                let left_shadow_size = (self.active_tab as f32) * (TAB_GAP + TAB_WIDTH) + TAB_GAP;
-                let left_shadow_size = left_shadow_size.min(container_info.rect.size.x);
-                let left_shadow_position = container_top_left.x + left_shadow_size * 0.5;
-
-                let right_shadow_start_pos = (self.active_tab as f32 + 1.0) * (TAB_GAP + TAB_WIDTH);
-                if right_shadow_start_pos < container_info.rect.size.x {
-                    let right_shadow_size = container_info.rect.size.x - right_shadow_start_pos;
-                    let right_shadow_pos = right_shadow_start_pos
-                        + container_info.get_top_left_position().x
-                        + right_shadow_size * 0.5;
-                    extra_render_steps.push(
-                        Box::new(move |gui_rects| {
-                            ElementBuilder::new(
-                                vec2(
-                                    right_shadow_pos,
-                                    tab_menu_position.y - (tab_menu_size.y * 0.5 + 3.0),
-                                ),
-                                vec2(right_shadow_size, 6.0),
-                            )
-                            .set_linear_gradient(lin_gradient.into())
-                            .build(gui_rects);
-
-                            ElementBuilder::new(
-                                vec2(
-                                    left_shadow_position,
-                                    tab_menu_position.y - (tab_menu_size.y * 0.5 + 3.0),
-                                ),
-                                vec2(left_shadow_size, 6.0),
-                            )
-                            .set_linear_gradient(lin_gradient.into())
-                            .build(gui_rects);
-                        }),
-                        container_info.depth_range.0 + depth_offset::TAB_SHADOW,
-                    );
-                } else {
-                    extra_render_steps.push(
-                        Box::new(move |gui_rects| {
-                            ElementBuilder::new(
-                                vec2(
-                                    left_shadow_position,
-                                    tab_menu_position.y - (tab_menu_size.y * 0.5 + 3.0),
-                                ),
-                                vec2(left_shadow_size, 6.0),
-                            )
-                            .set_linear_gradient(lin_gradient.into())
-                            .build(gui_rects);
-                        }),
-                        container_info.depth_range.0 + depth_offset::TAB_SHADOW,
-                    );
-                }
-            }
-            _ => {}
+        let tab_rect = Rect {
+            position: tab_menu_position,
+            size: tab_menu_size,
         };
 
-        let gui_container = GUIContainerInfo {
+        if let UIEvent::Render {
+            gui_rects,
+            extra_render_steps,
+        } = event
+        {
+            ElementBuilder::new(tab_menu_position, tab_menu_size)
+                .set_color(TAB_BG_COLOR.into())
+                .build(gui_rects);
+
+            extra_render_steps.push(
+                render_shadow_under_tab(self.active_tab, container_info, tab_rect),
+                container_info.depth_range.0 + depth_offset::TAB_SHADOW,
+            );
+        }
+
+        self.create_tab_buttons(
+            control_state,
+            &container_info,
+            event,
+            public_data,
+            tab_rect,
+            tab_names,
+        );
+
+        GUIContainerInfo {
             key: active_tab_key,
             container_info: ContainerInfo {
                 rect: Rect {
@@ -298,9 +256,50 @@ impl TabsContainer {
                 },
                 depth_range: container_info.depth_range,
             },
-        };
-
-        self.create_tab_buttons(control_state, &container_info, event, public_data);
-        gui_container
+        }
     }
+}
+
+fn render_shadow_under_tab(
+    active_tab: usize,
+    container_info: ContainerInfo,
+    tab_rect: Rect,
+) -> Box<dyn FnOnce(&mut GUIRects) -> ()> {
+    let left_shadow_size = (active_tab as f32) * (TAB_GAP + TAB_WIDTH) + TAB_GAP;
+    let left_shadow_size = left_shadow_size.min(container_info.rect.size.x);
+    let left_shadow_position = container_info.get_top_left_position().x + left_shadow_size * 0.5;
+
+    let right_shadow_start_pos = (active_tab as f32 + 1.0) * (TAB_GAP + TAB_WIDTH);
+    let right_shadow_size = container_info.rect.size.x - right_shadow_start_pos;
+    let right_shadow_pos =
+        right_shadow_start_pos + container_info.get_top_left_position().x + right_shadow_size * 0.5;
+
+    let show_right_shadow = right_shadow_start_pos < container_info.rect.size.x;
+
+    let bottom_position = tab_rect.position.y - (tab_rect.size.y * 0.5 + 3.0);
+    let right_shadow_rect = Rect {
+        position: vec2(right_shadow_pos, bottom_position),
+        size: vec2(right_shadow_size, 6.0),
+    };
+    let left_shadow_rect = Rect {
+        position: vec2(left_shadow_position, bottom_position),
+        size: vec2(left_shadow_size, 6.0),
+    };
+    let lin_gradient = LinearGradient {
+        colors: [RGBA::rrr1(0.10), RGBA::rrr1(0.10).set_alpha(0.0)],
+        start_position: vec2(0.0, 3.0),
+        end_position: vec2(0.0, -3.0),
+    };
+
+    Box::new(move |gui_rects| {
+        if show_right_shadow {
+            ElementBuilder::new_with_rect(right_shadow_rect)
+                .set_linear_gradient(lin_gradient.into())
+                .build(gui_rects);
+        }
+
+        ElementBuilder::new_with_rect(left_shadow_rect)
+            .set_linear_gradient(lin_gradient.into())
+            .build(gui_rects);
+    })
 }

@@ -19,7 +19,7 @@ use rwge::{
 
 use crate::public_data::PublicData;
 
-pub use tabs_container::{GUI_ACTIVE_COLOR, GUI_INACTIVE_COLOR, GUI_HOVER_COLOR};
+pub use tabs_container::{GUI_ACTIVE_COLOR, GUI_HOVER_COLOR, GUI_INACTIVE_COLOR};
 
 pub use self::layout::DividedElement;
 
@@ -67,7 +67,7 @@ pub struct WindowSystem {
 
 pub const DEPTH_SLICE_SIZE: u32 = 15;
 
-pub mod depth_offset{
+pub mod depth_offset {
     pub const TAB_SHADOW: u32 = 5;
     pub const RESIZE_CONTROL: u32 = 10;
     pub const DIVIDER: u32 = 2;
@@ -141,13 +141,18 @@ impl WindowSystem {
         window: &mut UIWindow,
         event: &mut UIEvent,
         public_data: &PublicData,
-        depth_range: (u32, u32)
+        depth_range: (u32, u32),
     ) -> Vec<TabLayoutInfo> {
         let mut tab_handle_stack = Vec::<TabLayoutInfo>::new();
         let mut layout_handle_stack = Vec::<LayoutOrTabInfo>::new();
 
-        layout_handle_stack.push(window.handle_event(event, public_data, control_state, depth_range));
-        
+        layout_handle_stack.push(window.handle_event(
+            event,
+            public_data,
+            control_state,
+            depth_range,
+        ));
+
         //println!("Layout handle push");
         loop {
             match layout_handle_stack.pop() {
@@ -191,13 +196,18 @@ impl WindowSystem {
         for (index, tab) in tab_handle_stack.drain(..).enumerate() {
             let tab_container = tabs_slotmap.get_value_mut(&tab.key).unwrap();
 
+            let tab_names: Vec<&str> = tab_container
+                .tabs
+                .iter()
+                .map(|gui_key| gui_container_slotmap.get_value(gui_key).unwrap().get_name())
+                .collect();
+
             let gui_container_info = tab_container.handle_event(
                 event,
                 public_data,
                 tab.container_info,
-                &gui_container_slotmap,
                 control_state,
-                index
+                &tab_names
             );
 
             let gui_container = gui_container_slotmap
@@ -208,7 +218,7 @@ impl WindowSystem {
                 public_data,
                 gui_container_info.container_info,
                 control_state,
-                index
+                index,
             );
         }
     }
@@ -223,7 +233,10 @@ impl WindowSystem {
                         window_mut,
                         event,
                         public_data,
-                        (index as u32 * DEPTH_SLICE_SIZE, ((index as u32 + 1) * DEPTH_SLICE_SIZE) - 1)
+                        (
+                            index as u32 * DEPTH_SLICE_SIZE,
+                            ((index as u32 + 1) * DEPTH_SLICE_SIZE) - 1,
+                        ),
                     );
                     WindowSystem::tabs_handle_event(
                         &mut self.control_state,
