@@ -1,6 +1,6 @@
 use std::ops::Deref;
-mod layout_element;
-use layout_element::LayoutElement;
+mod layout;
+use layout::LayoutElement;
 mod tabs_container;
 use tabs_container::TabsContainer;
 mod window;
@@ -21,7 +21,7 @@ use crate::public_data::PublicData;
 
 pub use tabs_container::{GUI_ACTIVE_COLOR, GUI_INACTIVE_COLOR, GUI_HOVER_COLOR};
 
-pub use self::layout_element::DividedElement;
+pub use self::layout::DividedElement;
 
 use super::{control::ControlState, gui_container::GUIContainer, ContainerInfo};
 
@@ -66,8 +66,12 @@ pub struct WindowSystem {
 }
 
 pub const DEPTH_SLICE_SIZE: u32 = 15;
-pub const SHADOW_DEPTH_OFFSET: u32 = 5;
-pub const RESIZE_CONTROL_DEPTH_OFFSET: u32 = 10;
+
+pub mod depth_offset{
+    pub const TAB_SHADOW: u32 = 5;
+    pub const RESIZE_CONTROL: u32 = 10;
+    pub const DIVIDER: u32 = 2;
+}
 
 impl WindowSystem {
     pub fn new() -> Self {

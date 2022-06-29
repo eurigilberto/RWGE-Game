@@ -4,15 +4,12 @@ use rwge::{
     color::RGBA,
     glam::{vec2, Vec2},
     gui::rect_ui::{
-        element::{
-            builder::ElementBuilder, Border, LinearGradient, RadialGradient,
-        },
+        element::{builder::ElementBuilder, Border, LinearGradient, RadialGradient},
         event::UIEvent,
         BorderRadius, Rect,
     },
     math_utils::{lerp_f32, lerp_vec2},
     uuid::Uuid,
-    
 };
 
 use crate::{
@@ -21,14 +18,14 @@ use crate::{
         window_layout::GUI_ACTIVE_COLOR,
         ContainerInfo,
     },
-    public_data::{ utils::get_engine_data, PublicData},
+    public_data::{utils::get_engine_data, PublicData},
 };
 
 use super::{render_container_background, GUIContainer};
 
 struct BoxData {
     pub box_size: f32,
-    pub boxes_data: Vec<Vec2>,
+    pub box_positions: Vec<Vec2>,
     pub box_color: Vec<RGBA>,
 }
 
@@ -102,7 +99,6 @@ impl GUIContainer for ContainerOne {
                                 .set_hot_with_rect(background_control, &container_info.rect);
                         }
                     }
-                    //println!("Current depth {}", control_state.get_current_depth());
                 }
 
                 if let UIEvent::MouseButton(mouse_input) = event {
@@ -118,7 +114,43 @@ impl GUIContainer for ContainerOne {
                     }
                     if mouse_input.is_left_released() {
                         if let Some(data) = self.instance_anim_data.get_mut(&instance_index) {
-                            data.multi_select_active_id = None;
+                            if control_state.is_active(data.multi_select_active_id) {
+                                let selec_pos = lerp_vec2(
+                                    data.start_position,
+                                    data.end_position,
+                                    vec2(0.5, 0.5),
+                                );
+                                let selec_size = Vec2::abs((data.start_position - selec_pos) * 2.0);
+
+                                let selector_rect = Rect {
+                                    position: selec_pos,
+                                    size: selec_size,
+                                };
+
+                                let box_size = vec2(
+                                    data.current_values.box_size,
+                                    data.current_values.box_size,
+                                );
+
+                                let random_color = RGBA::rand_rgb();
+                                for (box_pos, box_color) in data
+                                    .current_values
+                                    .box_positions
+                                    .iter()
+                                    .zip(data.current_values.box_color.iter_mut())
+                                {
+                                    let box_rect = Rect {
+                                        position: *box_pos,
+                                        size: box_size,
+                                    };
+
+                                    if selector_rect.intersecting_rect(&box_rect) {
+                                        *box_color = random_color;
+                                    }
+                                }
+
+                                data.multi_select_active_id = None;
+                            }
                         }
                     }
                 }
@@ -236,7 +268,8 @@ impl GUIContainer for ContainerOne {
                     let size_elem = required_rect_size - GRID_RECT_PADDING;
 
                     anim_data.target_values.box_size = size_elem;
-                    for (index, target) in anim_data.target_values.boxes_data.iter_mut().enumerate()
+                    for (index, target) in
+                        anim_data.target_values.box_positions.iter_mut().enumerate()
                     {
                         let h_index = index as u32 % horizontal_rect_count;
                         let v_index = index as u32 / horizontal_rect_count;
@@ -254,9 +287,9 @@ impl GUIContainer for ContainerOne {
                     );
                     for (current, target) in anim_data
                         .current_values
-                        .boxes_data
+                        .box_positions
                         .iter_mut()
-                        .zip(anim_data.target_values.boxes_data.iter())
+                        .zip(anim_data.target_values.box_positions.iter())
                     {
                         *current = Vec2::lerp(*current, *target, 0.1);
                     }
@@ -264,13 +297,13 @@ impl GUIContainer for ContainerOne {
                     //Create animation values if there are none for this instance
                     let current = BoxData {
                         box_size: 0.0,
-                        boxes_data: vec![position; self.count as usize],
+                        box_positions: vec![position; self.count as usize],
                         box_color: vec![self.color; self.count as usize],
                     };
 
                     let target = BoxData {
                         box_size: 0.0,
-                        boxes_data: vec![position; self.count as usize],
+                        box_positions: vec![position; self.count as usize],
                         box_color: vec![self.color; self.count as usize],
                     };
 
@@ -293,7 +326,7 @@ impl GUIContainer for ContainerOne {
                     .get(&instance_index)
                     .unwrap()
                     .current_values;
-                for (index, position) in anim_data.boxes_data.iter().enumerate() {
+                for (index, position) in anim_data.box_positions.iter().enumerate() {
                     let control_id = controls[index];
 
                     let i = index as u32;
@@ -321,18 +354,14 @@ impl GUIContainer for ContainerOne {
                 }
             }
 
-            if let UIEvent::Render {
-                gui_rects,
-                ..
-            } = event
-            {
+            if let UIEvent::Render { gui_rects, .. } = event {
                 let ref anim_data = self
                     .instance_anim_data
                     .get(&instance_index)
                     .unwrap()
                     .current_values;
                 for (index, (position, color)) in anim_data
-                    .boxes_data
+                    .box_positions
                     .iter()
                     .zip(&anim_data.box_color)
                     .enumerate()

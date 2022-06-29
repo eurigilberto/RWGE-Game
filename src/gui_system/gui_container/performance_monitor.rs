@@ -1,13 +1,17 @@
 use rwge::{
     color::RGBA,
-    glam::vec2,
+    font::{font_layout::create_font_layout, font_load_gpu::FontCollection},
+    glam::{vec2, Vec2},
     gui::rect_ui::{
         element::{builder::ElementBuilder, Border, Element},
-        BorderRadius,
-    }, font::{font_load_gpu::FontCollection, font_layout::create_font_layout},
+        BorderRadius, GUIRects, Rect,
+    },
 };
 
-use crate::{public_data::{utils::get_engine_data, PublicData}, gui_system::gui_container::render_container_background};
+use crate::{
+    gui_system::gui_container::render_container_background,
+    public_data::{utils::get_engine_data, PublicData},
+};
 
 use super::GUIContainer;
 
@@ -76,7 +80,7 @@ impl GUIContainer for PerformanceMonitor {
         public_data: &crate::public_data::PublicData,
         container_info: crate::gui_system::ContainerInfo,
         control_state: &mut crate::gui_system::control::ControlState,
-        instance_index: usize
+        instance_index: usize,
     ) {
         const COLUMN_HEIGHT: f32 = 100.0;
         const MIN_COLUMN_WIDTH: f32 = 20.0;
@@ -94,7 +98,7 @@ impl GUIContainer for PerformanceMonitor {
                 gui_rects,
                 extra_render_steps,
             } => {
-				render_container_background(gui_rects, &container_info);
+                render_container_background(gui_rects, &container_info);
 
                 let frame_averages = self.get_frame_averages();
 
@@ -106,7 +110,8 @@ impl GUIContainer for PerformanceMonitor {
                 let mut box_width = container_info.rect.size.x - (MARGIN * 2.0);
                 box_width = box_width.max(MIN_BOX_WIDTH);
 
-                let top_left_box_pos = container_info.get_top_left_position() + vec2(MARGIN, -MARGIN);
+                let top_left_box_pos =
+                    container_info.get_top_left_position() + vec2(MARGIN, -MARGIN);
 
                 let box_center =
                     top_left_box_pos + vec2(box_width * 0.5, -(COLUMN_HEIGHT * 0.5 + BOX_MARGIN));
@@ -122,44 +127,98 @@ impl GUIContainer for PerformanceMonitor {
                     }))
                     .build(gui_rects);
 
-                let font_collections = &public_data.collection.get::<Vec<FontCollection>>().unwrap()[0];
-                let text_layout = create_font_layout("Euri gjiIytf", font_collections, 1);
-                for text_elem in text_layout {
-                    let t_pos = top_left_box_pos + text_elem.position + vec2(0.0, -64.0);
-                    let t_size = text_elem.size;
+                //FONT RENDERING
+                let top_left_box_pos = top_left_box_pos + vec2(12.0, -12.0);
 
-                    ElementBuilder::new(t_pos, t_size)
-                        .set_sdffont(text_elem.tx_slice.into())
-                        .set_color(text_elem.color.into())
-                        .set_rect_mask(container_info.rect.into())
-                        .build(gui_rects);
-                }
+                ElementBuilder::new(top_left_box_pos, vec2(4.0, 4.0))
+                    .set_color(RGBA::RED.into())
+                    .build(gui_rects);
 
-                let text_layout = create_font_layout("Euri gjiIytf", font_collections, 0);
-                for text_elem in text_layout {
-                    let t_pos = top_left_box_pos + text_elem.position + vec2(0.0, -120.0);
-                    let t_size = text_elem.size;
+                let font_collection =
+                    &public_data.collection.get::<Vec<FontCollection>>().unwrap()[0];
 
-                    ElementBuilder::new(t_pos, t_size)
-                        .set_sdffont(text_elem.tx_slice.into())
-                        .set_color(text_elem.color.into())
-                        .set_rect_mask(container_info.rect.into())
-                        .build(gui_rects);
-                }
+                let mask_rect = Rect {
+                    position: box_center,
+                    size: box_size,
+                };
+                let mask_rect = container_info.rect.combine_rects(&mask_rect);
 
-                let text_layout = create_font_layout("Euri gjiIytf", font_collections, 2);
-                for text_elem in text_layout {
-                    let t_pos = top_left_box_pos + text_elem.position + vec2(0.0, -180.0);
-                    let t_size = text_elem.size;
+                if let Some(mask) = mask_rect {
+                    render_unbounded_horizontal_text(
+                        &font_collection,
+                        1,
+                        24.0,
+                        "Euri gjiIytf",
+                        top_left_box_pos,
+                        gui_rects,
+                        &mut |elem_builder| {
+                            elem_builder
+                                .set_color(RGBA::WHITE.into())
+                                .set_rect_mask(mask.into())
+                        },
+                    );
 
-                    ElementBuilder::new(t_pos, t_size)
-                        .set_sdffont(text_elem.tx_slice.into())
-                        .set_color(text_elem.color.into())
-                        .set_rect_mask(container_info.rect.into())
-                        .build(gui_rects);
+                    render_unbounded_horizontal_text(
+                        &font_collection,
+                        0,
+                        24.0,
+                        "Euri '@#$%^&*()_+-/*.' <scape> gjiIytf",
+                        top_left_box_pos + vec2(0.0, -32.0),
+                        gui_rects,
+                        &mut |elem_builder| {
+                            elem_builder
+                                .set_color(RGBA::WHITE.into())
+                                .set_rect_mask(mask.into())
+                        },
+                    );
+
+                    render_unbounded_horizontal_text(
+                        &font_collection,
+                        2,
+                        24.0,
+                        "Euri gjiIytf",
+                        top_left_box_pos + vec2(0.0, -64.0),
+                        gui_rects,
+                        &mut |elem_builder| {
+                            elem_builder
+                                .set_color(RGBA::WHITE.into())
+                                .set_rect_mask(mask.into())
+                        },
+                    );
                 }
             }
             _ => {}
         }
     }
+}
+
+fn render_unbounded_horizontal_text(
+    font_collection: &FontCollection,
+    collection_index: usize,
+    font_size: f32,
+    text: &str,
+    top_left_pos: Vec2,
+    gui_rects: &mut GUIRects,
+    render_char: &mut dyn FnMut(ElementBuilder) -> ElementBuilder,
+) {
+    let (text_layout, rect) =
+        create_font_layout(text, font_size, font_collection, collection_index);
+    let top_left_pos = top_left_pos + vec2(0.0, -rect.size.y);
+    for text_elem in text_layout {
+        let t_pos = top_left_pos + text_elem.position;
+        let t_size = text_elem.size;
+
+        let char_builder =
+            ElementBuilder::new(t_pos, t_size).set_sdffont(text_elem.tx_slice.into());
+        render_char(char_builder).build(gui_rects);
+    }
+
+    //Debug
+    /*ElementBuilder::new(top_left_pos + rect.position, rect.size)
+    .set_color(RGBA::TRANSPARENT.into())
+    .set_border(Some(Border {
+        size: 2,
+        color: RGBA::GREEN.into(),
+    }))
+    .build(gui_rects);*/
 }

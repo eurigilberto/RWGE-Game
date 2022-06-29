@@ -26,7 +26,7 @@ use crate::{
     },
 };
 
-use super::{LayoutOrTabInfo, LayoutOrTabKey, LayoutSlotKey, RESIZE_CONTROL_DEPTH_OFFSET};
+use super::{LayoutOrTabInfo, LayoutOrTabKey, LayoutSlotKey, depth_offset};
 
 pub struct ResizeDrag {
     active_id: Uuid,
@@ -94,7 +94,7 @@ pub fn resize_controls(
         vec2(1.0, 1.0),
         vec2(-1.0, 1.0),
     ];
-    control_state.set_depth_and_save(container_info.depth_range.0 + RESIZE_CONTROL_DEPTH_OFFSET);
+    control_state.set_depth_and_save(container_info.depth_range.0 + depth_offset::RESIZE_CONTROL);
     let rect_mask = Rect { position, size };
     /*for mult in offset_multipliers*/
     {
@@ -173,7 +173,7 @@ pub fn resize_controls(
                                 .set_color(RGBA::RED.into())
                                 .build(gui_rects);
                         }),
-                        container_info.depth_range.0 + RESIZE_CONTROL_DEPTH_OFFSET,
+                        container_info.depth_range.0 + depth_offset::RESIZE_CONTROL,
                     ),
                     State::Active => extra_render_steps.push(
                         Box::new(move |gui_rects| {
@@ -183,7 +183,7 @@ pub fn resize_controls(
                                 .set_color(RGBA::GREEN.into())
                                 .build(gui_rects);
                         }),
-                        container_info.depth_range.0 + RESIZE_CONTROL_DEPTH_OFFSET,
+                        container_info.depth_range.0 + depth_offset::RESIZE_CONTROL,
                     ),
                     State::Inactive => {}
                 }

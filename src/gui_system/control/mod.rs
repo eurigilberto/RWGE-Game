@@ -11,7 +11,7 @@ pub struct Uiid {
     depth: u32,
 }
 
-impl Into<ControlId> for Uiid{
+impl Into<ControlId> for Uiid {
     fn into(self) -> ControlId {
         ControlId::Control(self)
     }
@@ -29,13 +29,13 @@ pub enum ControlId {
     Control(Uiid),
 }
 
-use rwge::glam::{Vec2};
+use rwge::glam::Vec2;
 use rwge::gui::rect_ui::Rect;
 use rwge::uuid::Uuid;
 
-pub mod slider;
 pub mod drag_element;
 pub mod main_window_top_bar;
+pub mod slider;
 
 pub struct ControlState {
     current_ui_id: Option<Uiid>,
@@ -94,7 +94,8 @@ impl ControlState {
 
     pub fn set_depth(&mut self, depth: u32) {
         let current_id = self
-            .current_ui_id.as_mut()
+            .current_ui_id
+            .as_mut()
             .expect("GUI Control state was not initialized properly");
         current_id.depth = depth;
     }
@@ -124,11 +125,9 @@ impl ControlState {
             if control_rect.inside_rect(cursor_pos) {
                 self.set_hot(id)
             } else {
-                //self.unset_hovered(id);
                 false
             }
         } else {
-            //self.unset_hovered(id);
             false
         }
     }
@@ -156,7 +155,16 @@ impl ControlState {
         }
     }
 
-    pub fn is_hovered(&self, id: Uiid)->bool{
+    pub fn is_active(&self, active_id: Option<Uuid>) -> bool {
+        if let Some(active_id) = active_id {
+            if let State::Active = self.get_control_state(ControlId::Active(active_id)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    pub fn is_hovered(&self, id: Uiid) -> bool {
         match self.get_control_state(id.into()) {
             State::Hovered => true,
             _ => false,
@@ -201,7 +209,7 @@ impl ControlState {
         // Remove active because it did not update its active status this frame
         assert_eq!(self.depth_stack.len(), 0, "The depth stack should be empty. If it is not empty it might inadvertently change the state of other controls.");
         if self.active.is_nil() {
-            if self.hot.is_some(){
+            if self.hot.is_some() {
                 self.hovered = self.hot;
             }
 
@@ -232,7 +240,7 @@ impl ControlState {
         }
         if self.hot.is_some() {
             self.hold_hover = true;
-        }else{
+        } else {
             self.hold_hover = false;
         }
         self.hot = None;
@@ -245,10 +253,10 @@ impl ControlState {
     }
 }
 
-pub fn get_current_control_id(ui_id: Uiid, active_id: &Option<Uuid>)->ControlId{
+pub fn get_current_control_id(ui_id: Uiid, active_id: &Option<Uuid>) -> ControlId {
     if let Some(active_id) = active_id {
         ControlId::Active(*active_id)
-    }else{
+    } else {
         ControlId::Control(ui_id)
     }
 }
