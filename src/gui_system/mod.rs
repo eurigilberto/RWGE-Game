@@ -19,7 +19,7 @@ pub struct ContainerInfo {
 
 impl ContainerInfo {
     pub fn get_top_left_position(&self) -> Vec2 {
-        self.rect.get_top_left_position()
+        self.rect.top_left_position()
     }
 }
 
@@ -35,9 +35,12 @@ use rwge::{
     Engine,
 };
 
-use crate::public_data::{
-    utils::{get_engine_data, get_render_texture},
-    PublicData,
+use crate::{
+    gui_system::gui_container::{text_animation::TextAnimation, text_layout_test::TextLayoutTest},
+    public_data::{
+        utils::{get_engine_data, get_render_texture},
+        PublicData,
+    },
 };
 
 use self::{
@@ -76,7 +79,7 @@ impl GUISystem {
                 String::from("Wind C2"),
                 0.0,
                 RGBA::rgb(0.75, 0.25, 0.0),
-                10,
+                500,
             )))
             .unwrap();
 
@@ -93,10 +96,19 @@ impl GUISystem {
             .push_gui_container(Box::new(PerformanceMonitor::new()))
             .unwrap();
 
+        let text_layout_key = window_layouting
+            .push_gui_container(Box::new(TextLayoutTest::new()))
+            .unwrap();
+        let text_animation_key = window_layouting
+            .push_gui_container(Box::new(TextAnimation::new()))
+            .unwrap();
+
         let tab_1 = window_layouting.create_tab(vec![c1_key, c2_key]);
         let tab_2 = window_layouting.create_tab(vec![c2_key, c3_key, c1_key]);
         let tab_3 = window_layouting.create_tab(vec![c3_key, c2_key]);
         let perf_tab = window_layouting.create_tab(vec![perf_key]);
+        let text_layout = window_layouting.create_tab(vec![text_layout_key]);
+        let text_animation = window_layouting.create_tab(vec![text_animation_key]);
 
         let single_1 = window_layouting
             .create_single_layout_element(tab_1)
@@ -110,15 +122,47 @@ impl GUISystem {
         let single_perf = window_layouting
             .create_single_layout_element(perf_tab)
             .unwrap();
+        let single_text_lay = window_layouting
+            .create_single_layout_element(text_layout)
+            .unwrap();
+        let single_text_animation = window_layouting
+            .create_single_layout_element(text_animation)
+            .unwrap();
+
+        let text_vertical = window_layouting
+            .create_vertical_layout_element(vec![
+                DividedElement {
+                    layout_key: single_text_lay,
+                    size: 1.0,
+                },
+                DividedElement {
+                    layout_key: single_text_animation,
+                    size: 1.0,
+                },
+            ])
+            .unwrap();
+
+        let perf_text_horizontal = window_layouting
+            .create_horizontal_layout_element(vec![
+                DividedElement {
+                    layout_key: single_perf,
+                    size: 1.0,
+                },
+                DividedElement {
+                    layout_key: text_vertical,
+                    size: 1.0,
+                },
+            ])
+            .unwrap();
 
         let center_vertical = window_layouting
             .create_vertical_layout_element(vec![
                 DividedElement {
                     layout_key: single_1,
-                    size: 3.0,
+                    size: 1.0,
                 },
                 DividedElement {
-                    layout_key: single_perf,
+                    layout_key: perf_text_horizontal,
                     size: 1.0,
                 },
             ])

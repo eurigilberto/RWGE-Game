@@ -1,5 +1,7 @@
 pub mod container_one;
 pub mod performance_monitor;
+pub mod text_layout_test;
+pub mod text_animation;
 
 use std::any::Any;
 

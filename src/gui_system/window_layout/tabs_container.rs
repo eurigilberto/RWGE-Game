@@ -2,7 +2,7 @@ use std::{cell::RefCell, sync::Arc};
 
 use rwge::{
     color::{HSLA, RGBA},
-    font::font_layout::create_font_layout,
+    font::font_layout::create_single_line,
     glam::{vec2, Vec2},
     gui::rect_ui::{
         element::{builder::ElementBuilder, Border, LinearGradient},
@@ -140,7 +140,7 @@ impl TabsContainer {
 
             let font_collection = &get_font_collections(public_data)[0];
             let (font_elements, mut text_rect) =
-                create_font_layout(tab_name, 16.0, font_collection, 2);
+                create_single_line(tab_name, 16.0, font_collection, 0);
 
             for font_elem in font_elements {
                 ElementBuilder::new_with_rect(
@@ -166,7 +166,7 @@ impl TabsContainer {
         tab_names: &Vec<&str>,
     ) {
 
-        let mut current_pos = tab_rect.get_left_position();
+        let mut current_pos = tab_rect.left_position();
 
         for index in 0..self.tabs.len() {
             let tab_btn_pos = current_pos + vec2(TAB_GAP + TAB_WIDTH * 0.5, 0.0);

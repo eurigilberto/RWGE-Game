@@ -71,6 +71,7 @@ pub mod depth_offset {
     pub const TAB_SHADOW: u32 = 5;
     pub const RESIZE_CONTROL: u32 = 10;
     pub const DIVIDER: u32 = 2;
+    pub const SELECT_COUNT: u32 = 6;
 }
 
 impl WindowSystem {
@@ -78,7 +79,7 @@ impl WindowSystem {
         Self {
             gui_container_slotmap: Slotmap::<Box<dyn GUIContainer>>::new_with_capacity(20),
             tabs_slotmap: Slotmap::<TabsContainer>::new_with_capacity(10),
-            layout_slotmap: Slotmap::<LayoutElement>::new_with_capacity(10),
+            layout_slotmap: Slotmap::<LayoutElement>::new_with_capacity(20),
             window_collection: Slotmap::<UIWindow>::new_with_capacity(5),
             window_order: Vec::<WindowSlotKey>::with_capacity(5),
             control_state: ControlState::new(),
@@ -174,7 +175,6 @@ impl WindowSystem {
                 None => break,
             }
         }
-        //println!("Layout handle push stop");
 
         assert_eq!(
             layout_handle_stack.len(),
