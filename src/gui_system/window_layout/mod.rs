@@ -72,6 +72,7 @@ pub mod depth_offset {
     pub const RESIZE_CONTROL: u32 = 10;
     pub const DIVIDER: u32 = 2;
     pub const SELECT_COUNT: u32 = 6;
+    pub const FONT_ANIM_OFFSET: u32 = 8;
 }
 
 impl WindowSystem {

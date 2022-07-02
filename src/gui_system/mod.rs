@@ -7,7 +7,7 @@ use std::{
 };
 
 mod control;
-mod gui_container;
+pub mod gui_container;
 mod window_layout;
 
 #[derive(Copy, Clone)]

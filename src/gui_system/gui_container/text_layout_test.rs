@@ -14,7 +14,14 @@ use rwge::{
     uuid::Uuid,
 };
 
-use crate::gui_system::{control::slider, ContainerInfo};
+use crate::{
+    gui_system::{
+        control::slider,
+        gui_container::text_animation::{WordAnimation, WordAnimData, TextAnimationData},
+        ContainerInfo,
+    },
+    public_data::utils::get_time,
+};
 
 use super::{render_container_background, GUIContainer};
 
@@ -279,7 +286,25 @@ impl GUIContainer for TextLayoutTest {
                                 self.hovered_word = None;
                             }
                         }
-                    }else{
+
+                        if let UIEvent::MouseButton(mouse_input) = event {
+                            if mouse_input.is_left_pressed() && self.hovered_word.is_some() {
+                                let w_rect = self.hovered_word.unwrap();
+                                public_data
+                                    .collection
+                                    .get::<TextAnimationData>()
+                                    .unwrap()
+                                    .push_anim_data(WordAnimData::new(
+                                        w_rect.rect,
+                                        self.font_elements.as_ref().unwrap()
+                                            [w_rect.index..w_rect.index + w_rect.len]
+                                            .to_vec(),
+                                        text_render_offset,
+                                        get_time(public_data).time,
+                                    ))
+                            }
+                        }
+                    } else {
                         self.hovered_word = None;
                     }
                 }
@@ -399,17 +424,19 @@ impl GUIContainer for TextLayoutTest {
                 let rect_mask_index = push_rect_mask(cont_rect, gui_rects) as u16;
                 if let Some(ref font_elems) = self.font_elements {
                     let text_start_position = cont_rect.top_left_position() + text_render_offset;
-                    
+
                     let mut out_of_bounds_count = 0;
                     let mut removed = false;
                     for (index, elem) in font_elems.iter().enumerate() {
                         let elem_rect = elem.rect.offset_position(text_start_position);
 
-                        if !removed && elem_rect.position.y < cont_rect.position.y
-                            && !elem_rect.intersecting_rect(&(cont_rect.offset_size(Vec2::splat(30.0))))
+                        if !removed
+                            && elem_rect.position.y < cont_rect.position.y
+                            && !elem_rect
+                                .intersecting_rect(&(cont_rect.offset_size(Vec2::splat(30.0))))
                         {
                             out_of_bounds_count += 1;
-                            if out_of_bounds_count > 10{
+                            if out_of_bounds_count > 10 {
                                 removed = true;
                                 //break;
                             }

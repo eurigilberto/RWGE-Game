@@ -5,7 +5,7 @@ use gui_font::load_default_font_data;
 use public_data::{EngineData, PublicData};
 pub use rwge::gui::rect_ui::GUIRects;
 mod gui_system;
-use gui_system::GUISystem;
+use gui_system::{GUISystem, gui_container::text_animation::TextAnimationData};
 
 use rwge::{
     color::RGBA,
@@ -82,6 +82,8 @@ impl Game {
 
         let gui_copy_texture_surface =
             create_gui_copy_texture_to_surface(&mut public_data, &gui_rects, engine);
+
+        public_data.collection.insert(TextAnimationData::new());
 
         Self {
             gui_rects,
