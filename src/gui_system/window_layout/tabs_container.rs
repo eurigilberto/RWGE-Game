@@ -89,7 +89,7 @@ impl TabsContainer {
             let (round_rect, color) = if is_active_tab {
                 rect = rect
                     .offset_position(-vec2(0.0, TAB_GAP * 0.5))
-                    .offset_size(vec2(0.0, TAB_GAP));
+                    .offset_size(vec2(0.0, TAB_GAP + 2.0));
                 (
                     BorderRadius::ForTopBottom {
                         top: rect.size.y * 0.5 - TAB_GAP,
@@ -140,7 +140,7 @@ impl TabsContainer {
 
             let font_collection = &get_font_collections(public_data)[0];
             let (font_elements, mut text_rect) =
-                create_single_line(tab_name, 16.0, font_collection, 0);
+                create_single_line(tab_name, 16.0, font_collection, 0, 0.0);
 
             for font_elem in font_elements {
                 ElementBuilder::new_with_rect(
@@ -267,12 +267,12 @@ fn render_shadow_under_tab(
 ) -> Box<dyn FnOnce(&mut GUIRects) -> ()> {
     let left_shadow_size = (active_tab as f32) * (TAB_GAP + TAB_WIDTH) + TAB_GAP;
     let left_shadow_size = left_shadow_size.min(container_info.rect.size.x);
-    let left_shadow_position = container_info.get_top_left_position().x + left_shadow_size * 0.5;
+    let left_shadow_position = container_info.top_left_position().x + left_shadow_size * 0.5;
 
     let right_shadow_start_pos = (active_tab as f32 + 1.0) * (TAB_GAP + TAB_WIDTH);
     let right_shadow_size = container_info.rect.size.x - right_shadow_start_pos;
     let right_shadow_pos =
-        right_shadow_start_pos + container_info.get_top_left_position().x + right_shadow_size * 0.5;
+        right_shadow_start_pos + container_info.top_left_position().x + right_shadow_size * 0.5;
 
     let show_right_shadow = right_shadow_start_pos < container_info.rect.size.x;
 

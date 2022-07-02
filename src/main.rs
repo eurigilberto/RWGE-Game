@@ -206,6 +206,7 @@ fn main() {
         .with_decorations(false)
         .with_resizable(true)
         //.with_transparent(true)
+        .with_maximized(true)
         .build(&event_loop)
         .expect("Window could not be created");
 

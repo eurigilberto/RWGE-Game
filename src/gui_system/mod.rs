@@ -18,7 +18,7 @@ pub struct ContainerInfo {
 }
 
 impl ContainerInfo {
-    pub fn get_top_left_position(&self) -> Vec2 {
+    pub fn top_left_position(&self) -> Vec2 {
         self.rect.top_left_position()
     }
 }
@@ -129,10 +129,10 @@ impl GUISystem {
             .create_single_layout_element(text_animation)
             .unwrap();
 
-        let text_vertical = window_layouting
+        let perf_text_anim_vert = window_layouting
             .create_vertical_layout_element(vec![
                 DividedElement {
-                    layout_key: single_text_lay,
+                    layout_key: single_perf,
                     size: 1.0,
                 },
                 DividedElement {
@@ -142,15 +142,15 @@ impl GUISystem {
             ])
             .unwrap();
 
-        let perf_text_horizontal = window_layouting
+        let perf_text_horiz = window_layouting
             .create_horizontal_layout_element(vec![
                 DividedElement {
-                    layout_key: single_perf,
+                    layout_key: perf_text_anim_vert,
                     size: 1.0,
                 },
                 DividedElement {
-                    layout_key: text_vertical,
-                    size: 1.0,
+                    layout_key: single_text_lay,
+                    size: 1.2,
                 },
             ])
             .unwrap();
@@ -162,8 +162,8 @@ impl GUISystem {
                     size: 1.0,
                 },
                 DividedElement {
-                    layout_key: perf_text_horizontal,
-                    size: 1.0,
+                    layout_key: perf_text_horiz,
+                    size: 2.0,
                 },
             ])
             .unwrap();
@@ -219,11 +219,11 @@ impl GUISystem {
                 },
                 DividedElement {
                     layout_key: center_vertical,
-                    size: 1.5,
+                    size: 2.0,
                 },
                 DividedElement {
                     layout_key: vertical_1,
-                    size: 1.0,
+                    size: 1.25,
                 },
             ])
             .unwrap();
@@ -272,11 +272,6 @@ impl GUISystem {
         gui_rects.rect_collection.clear_buffers();
         {
             self.window_layouting.render_event(public_data, gui_rects);
-            /*test_screen(
-                &get_engine_data(public_data).time,
-                gui_rects,
-                self.screen_size,
-            );*/
         }
         gui_rects
             .rect_collection

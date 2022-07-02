@@ -17,14 +17,14 @@ pub fn load_default_font_data<'a>() -> [FontDataLoad<'a>; 3] {
             name: "Neo_San_Medium_Italic",
             data: font_data_1,
             char_limit: FontCharLimit::All,
-            character_size: 52.0,
+            character_size: 60.0,
             padding: 12,
         },
         FontDataLoad {
             name: "Lato_Bold",
             data: font_data_2,
             char_limit: FontCharLimit::All,
-            character_size: 52.0,
+            character_size: 60.0,
             padding: 12,
         },
         FontDataLoad {

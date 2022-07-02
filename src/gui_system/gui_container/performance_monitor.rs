@@ -3,7 +3,10 @@ use rwge::{
     font::{font_layout::create_single_line, font_load_gpu::FontCollection},
     glam::{vec2, Vec2},
     gui::rect_ui::{
-        element::{builder::ElementBuilder, Border, Element, push_linear_gradient, push_rect_mask, push_color, LinearGradient},
+        element::{
+            builder::ElementBuilder, push_color, push_linear_gradient, push_rect_mask, Border,
+            Element, LinearGradient,
+        },
         event::UIEvent,
         BorderRadius, GUIRects, Rect,
     },
@@ -21,7 +24,7 @@ pub struct AverageTimer {
     end_index: usize,
     time_data: [f32; 60],
     data_index: usize,
-    most_recent: usize
+    most_recent: usize,
 }
 
 impl AverageTimer {
@@ -40,11 +43,11 @@ impl AverageTimer {
         f_sum / 60.0
     }
 
-    pub fn get_most_recent(&self) -> f32{
+    pub fn get_most_recent(&self) -> f32 {
         self.average_times[self.most_recent]
     }
 
-    pub fn get_most_recent_two_dec(&self)->f32{
+    pub fn get_most_recent_two_dec(&self) -> f32 {
         (self.get_most_recent() * 100.0).round() / 100.0
     }
 
@@ -64,9 +67,9 @@ impl AverageTimer {
         }
     }
 
-    pub fn get_average_times(&self) -> [f32;10]{
+    pub fn get_average_times(&self) -> [f32; 10] {
         let mut times = [0.0; 10];
-        for i in 0..10{
+        for i in 0..10 {
             let index = (self.end_index + i) % 10;
             times[i] = self.average_times[index];
         }
@@ -78,7 +81,7 @@ pub struct PerformanceMonitor {
     frame_timer: AverageTimer,
     render_timer: AverageTimer,
     cpu_timer: AverageTimer,
-    gpu_lock_time: AverageTimer
+    gpu_lock_time: AverageTimer,
 }
 
 impl PerformanceMonitor {
@@ -87,7 +90,7 @@ impl PerformanceMonitor {
             frame_timer: AverageTimer::new(),
             render_timer: AverageTimer::new(),
             cpu_timer: AverageTimer::new(),
-            gpu_lock_time: AverageTimer::new()
+            gpu_lock_time: AverageTimer::new(),
         }
     }
 }
@@ -112,8 +115,9 @@ impl GUIContainer for PerformanceMonitor {
         const GAP: f32 = 5.0;
         const MIN_BOX_WIDTH: f32 =
             BOX_MARGIN + MIN_COLUMN_WIDTH + GAP + MIN_COLUMN_WIDTH + BOX_MARGIN;
-        const MAX_BOX_WIDTH: f32 =
-            BOX_MARGIN + MIN_COLUMN_WIDTH * 12.0 + GAP * 9.0 + BOX_MARGIN;
+        const MAX_BOX_WIDTH: f32 = BOX_MARGIN + MIN_COLUMN_WIDTH * 12.0 + GAP * 9.0 + BOX_MARGIN;
+
+        const CHAR_SPACING: f32 = 0.05;
 
         match event {
             rwge::gui::rect_ui::event::UIEvent::Update => {
@@ -125,7 +129,8 @@ impl GUIContainer for PerformanceMonitor {
                 self.cpu_timer.update_frame_data(
                     ((op_time.update_time + op_time.event_handling_time) as f32) / 1000.0,
                 );
-                self.gpu_lock_time.update_frame_data((op_time.gpu_lock_time as f32) / 1000.0);
+                self.gpu_lock_time
+                    .update_frame_data((op_time.gpu_lock_time as f32) / 1000.0);
             }
             rwge::gui::rect_ui::event::UIEvent::Render {
                 gui_rects,
@@ -134,15 +139,15 @@ impl GUIContainer for PerformanceMonitor {
                 render_container_background(gui_rects, &container_info);
 
                 let mut top_left_box_pos =
-                    container_info.get_top_left_position() + vec2(MARGIN, -MARGIN);
+                    container_info.top_left_position() + vec2(MARGIN, -MARGIN);
 
                 let font_collection =
                     &public_data.collection.get::<Vec<FontCollection>>().unwrap()[0];
 
-                let rect_mask_data_index = push_rect_mask(container_info.rect,gui_rects) as u16;
+                let rect_mask_data_index = push_rect_mask(container_info.rect, gui_rects) as u16;
 
                 let (font_elems, font_rect) =
-                    create_single_line("Average Frame Time (ms)", 18.0, font_collection, 0);
+                    create_single_line("Average Frame Time (ms)", 18.0, font_collection, 0, CHAR_SPACING);
 
                 for elem in font_elems {
                     let char_rect = elem
@@ -167,6 +172,7 @@ impl GUIContainer for PerformanceMonitor {
                         14.0,
                         font_collection,
                         1,
+                        CHAR_SPACING,
                     );
 
                     for elem in font_elems {
@@ -190,6 +196,7 @@ impl GUIContainer for PerformanceMonitor {
                         18.0,
                         font_collection,
                         0,
+                        CHAR_SPACING,
                     );
 
                     for elem in font_elems {
@@ -214,6 +221,7 @@ impl GUIContainer for PerformanceMonitor {
                         18.0,
                         font_collection,
                         0,
+                        CHAR_SPACING,
                     );
 
                     for elem in font_elems {
@@ -238,6 +246,7 @@ impl GUIContainer for PerformanceMonitor {
                         18.0,
                         font_collection,
                         0,
+                        CHAR_SPACING,
                     );
 
                     for elem in font_elems {
@@ -263,6 +272,7 @@ impl GUIContainer for PerformanceMonitor {
                         20.0,
                         font_collection,
                         1,
+                        CHAR_SPACING,
                     );
 
                     for elem in font_elems {
@@ -361,12 +371,21 @@ fn bar_graph(rect: Rect, values: &[f32], event: &mut UIEvent, mask: Rect) {
                     horizontal_pos += bw + GAP_SIZE;
                     ElementBuilder::new_with_rect(bar_rect)
                         .set_rect_mask(mask.into())
-                        .set_linear_gradient(LinearGradient{
-                            colors: [RGBA::WHITE, RGBA::rgb(0.95, 0.35, 0.2)],
-                            start_position: vec2(0.0, -bar_rect.size.y*0.5),
-                            end_position: vec2(0.0, bar_rect.size.y*0.5),
-                        }.into())
-                        .set_round_rect(BorderRadius::ForTopBottom{top: bw * 0.5, bottom: bw * 0.15}.into())
+                        .set_linear_gradient(
+                            LinearGradient {
+                                colors: [RGBA::WHITE, RGBA::rgb(0.95, 0.35, 0.2)],
+                                start_position: vec2(0.0, -bar_rect.size.y * 0.5),
+                                end_position: vec2(0.0, bar_rect.size.y * 0.5),
+                            }
+                            .into(),
+                        )
+                        .set_round_rect(
+                            BorderRadius::ForTopBottom {
+                                top: bw * 0.5,
+                                bottom: bw * 0.15,
+                            }
+                            .into(),
+                        )
                         .build(gui_rects);
                 }
                 _ => {}

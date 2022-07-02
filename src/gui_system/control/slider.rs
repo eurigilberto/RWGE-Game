@@ -2,7 +2,7 @@ use rwge::{
     color::RGBA,
     glam::{vec2, Vec2},
     gui::rect_ui::{
-        element::{builder::ElementBuilder, LinearGradient},
+        element::{builder::ElementBuilder, LinearGradient, Border},
         event::UIEvent,
         BorderRadius, Rect,
     },
@@ -16,8 +16,8 @@ pub fn inv_lerp(a: f32, b: f32, t: f32) -> f32 {
     (t - a) / (b - a)
 }
 
-const SLIDER_CONTROL_PIN_WIDTH: f32 = 10.0;
-const SLIDER_CONTROL_PIN_HEIGHT: f32 = 16.0;
+const SLIDER_CONTROL_PIN_WIDTH: f32 = 22.0;
+const SLIDER_CONTROL_PIN_HEIGHT: f32 = 22.0;
 const SLIDER_CONTROL_BG_HEIGHT: f32 = 10.0;
 
 pub fn slider(
@@ -68,11 +68,14 @@ pub fn slider(
                 position: rect.position,
                 size: vec2(rect.size.x, SLIDER_CONTROL_PIN_HEIGHT),
             };
-
+            let control_rect = control_rect.combine_rects(&mask);
+            
             if active_id.is_some() {
                 control_state.hold_active_state(active_id.unwrap());
             } else {
-                control_state.set_hot_with_rect(control_id, &control_rect);
+                if let Some(control_rect) = control_rect{
+                    control_state.set_hot_with_rect(control_id, &control_rect);
+                }
             }
         }
         UIEvent::Render { gui_rects, .. } => {
@@ -130,22 +133,20 @@ pub fn slider(
                     .build(gui_rects);
             }
 
-            ElementBuilder::new(slider_pin_position, slider_pin_size)
-                .set_round_rect(
-                    BorderRadius::ForAll(f32::min(
-                        SLIDER_CONTROL_PIN_WIDTH * 0.5,
-                        SLIDER_CONTROL_PIN_HEIGHT * 0.5,
-                    ))
-                    .into(),
-                )
-                .set_linear_gradient(
-                    LinearGradient {
-                        colors: [RGBA::RED, RGBA::WHITE],
-                        start_position: vec2(0.0, -slider_pin_size.y * 0.5),
-                        end_position: vec2(0.0, slider_pin_size.y * 0.5),
-                    }
-                    .into(),
-                )
+            let state =
+                    control_state.get_control_state(get_current_control_id(control_id, active_id));
+            let (border_size, border_color) = match state {
+                State::Inactive => {(4, RGBA::rrr1(0.5))},
+                State::Hovered => {(4,RGBA::rrr1(0.75))},
+                State::Active => {(2,RGBA::rrr1(0.75))},
+            };
+            ElementBuilder::new(slider_pin_position.round(), slider_pin_size)
+                .set_circle()
+                .set_color(RGBA::BLACK.into())
+                .set_border(Some(Border{
+                    size: border_size,
+                    color: border_color.into(),
+                }))
                 .set_rect_mask(mask.into())
                 .build(gui_rects);
         }

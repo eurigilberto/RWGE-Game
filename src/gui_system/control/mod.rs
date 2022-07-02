@@ -36,6 +36,8 @@ use rwge::uuid::Uuid;
 pub mod drag_element;
 pub mod main_window_top_bar;
 pub mod slider;
+pub mod button;
+pub use button::button;
 
 pub struct ControlState {
     current_ui_id: Option<Uiid>,
@@ -193,10 +195,12 @@ impl ControlState {
         }
     }
 
-    pub fn hold_active_state(&mut self, active_id: Uuid) {
+    pub fn hold_active_state(&mut self, active_id: Uuid) -> bool {
         if self.active == active_id {
             self.hold_active = true;
+            return true;
         }
+        return false;
     }
 
     /// Called at the start of the frame
