@@ -17,7 +17,7 @@ use rwge::{
 use crate::{
     gui_system::{
         control::slider,
-        gui_container::text_animation::{WordAnimation, WordAnimData, TextAnimationData},
+        gui_container::text_animation::{TextAnimationData, WordAnimData, WordAnimation},
         ContainerInfo,
     },
     public_data::utils::get_time,
@@ -229,16 +229,22 @@ impl GUIContainer for TextLayoutTest {
                 for (index, (s_rect, s_border, control_id, ..)) in font_selectors.iter().enumerate()
                 {
                     let mut elem_builder = ElementBuilder::new_with_rect(*s_rect);
-                    if index == self.font_index {
-                        elem_builder = elem_builder.set_color(SELECTED_BTN.into());
-                    } else if control_state.is_hovered(*control_id) {
-                        elem_builder = elem_builder.set_color(HOVERED_BTN.into());
-                    } else {
-                        elem_builder = elem_builder.set_color(INACTIVE_BTN.into());
-                    }
-                    if let Some(border) = *s_border {
-                        elem_builder = elem_builder.set_round_rect(border.into());
-                    }
+                    elem_builder = {
+                        if index == self.font_index {
+                            elem_builder.set_color(SELECTED_BTN.into())
+                        } else if control_state.is_hovered(*control_id) {
+                            elem_builder.set_color(HOVERED_BTN.into())
+                        } else {
+                            elem_builder.set_color(INACTIVE_BTN.into())
+                        }
+                    };
+                    elem_builder = {
+                        if let Some(border) = *s_border {
+                            elem_builder.set_round_rect(border.into())
+                        }else{
+                            elem_builder
+                        }
+                    };
                     elem_builder
                         .set_rect_mask(container_info.rect.into())
                         .build(gui_rects);
@@ -452,16 +458,19 @@ impl GUIContainer for TextLayoutTest {
                                 });
                             }
                         }
-                        let mut elem_builder = ElementBuilder::new_with_rect(elem_rect)
+                        let elem_builder = ElementBuilder::new_with_rect(elem_rect)
                             .set_sdffont(elem.tx_slice.into())
                             .set_rect_mask(rect_mask_index.into());
-                        if let Some(lin_grad) = lin_grad {
-                            elem_builder = elem_builder.set_linear_gradient(lin_grad.into());
+                        {
+                            if let Some(lin_grad) = lin_grad {
+                                elem_builder.set_linear_gradient(lin_grad.into())
+                            } else if removed {
+                                elem_builder.set_color(RGBA::RED.into())
+                            } else {
+                                elem_builder
+                            }
                         }
-                        if removed {
-                            elem_builder = elem_builder.set_color(RGBA::RED.into());
-                        }
-                        elem_builder.build(gui_rects);
+                        .build(gui_rects)
                     }
                 }
 

@@ -1,7 +1,7 @@
 use std::{collections::HashMap, string};
 
 use rwge::{
-    color::{RGBA, HSLA},
+    color::{HSLA, RGBA},
     font::font_layout::create_single_line,
     glam::{vec2, Vec2},
     gui::rect_ui::{
@@ -108,7 +108,8 @@ impl GUIContainer for ContainerOne {
         }
 
         {
-            {//BACKGROUND SELECTION BOX
+            {
+                //BACKGROUND SELECTION BOX
                 let background_control = control_state.get_id();
                 if let UIEvent::Update = event {
                     if let Some(data) = self.instance_anim_data.get(&instance_index) {
@@ -135,12 +136,13 @@ impl GUIContainer for ContainerOne {
                     if mouse_input.is_left_released() {
                         if let Some(data) = self.instance_anim_data.get_mut(&instance_index) {
                             if control_state.is_active(data.multi_select_active_id) {
-                                let random_color = HSLA{
+                                let random_color = HSLA {
                                     h: rwge::rand::random::<f32>() * 360.0,
                                     s: 0.6,
                                     l: 0.5,
                                     a: 1.0,
-                                }.into();
+                                }
+                                .into();
                                 for (box_hover, box_color) in data
                                     .select_hover_boxes
                                     .iter_mut()
@@ -191,7 +193,8 @@ impl GUIContainer for ContainerOne {
                 }
             }
 
-            {//SLIDER AND BUTTON
+            {
+                //SLIDER AND BUTTON
                 const TEXT_WIDTH: f32 = 200.0;
                 const TEXT_HEIGHT: f32 = 25.0;
 
@@ -333,11 +336,11 @@ impl GUIContainer for ContainerOne {
                     0,
                     0.0,
                     [color_1, color_2],
-                    [b_color_1, b_color_2]
+                    [b_color_1, b_color_2],
                 ) {
                     if let Some(anim_data) = self.instance_anim_data.get_mut(&instance_index) {
                         let box_count = anim_data.current_values.box_color.len();
-                        for i in 0..box_count{
+                        for i in 0..box_count {
                             let rand_index = rwge::rand::random::<usize>() % box_count;
                             anim_data.current_values.box_color.swap(i, rand_index);
                             anim_data.current_values.box_positions.swap(i, rand_index);
@@ -441,7 +444,7 @@ impl GUIContainer for ContainerOne {
                         .iter_mut()
                         .zip(anim_data.target_values.box_color.iter())
                     {
-                        *current = current.lerp_rgba(target, 0.05*anim_scaler);
+                        *current = current.lerp_rgba(target, 0.05 * anim_scaler);
                     }
                 } else {
                     //Create animation values if there are none for this instance
@@ -561,35 +564,33 @@ impl GUIContainer for ContainerOne {
                         .set_rect_mask(container_info.rect.into())
                         .set_round_rect(BorderRadius::ForAll(roundness).into());
 
-                    let linear_gradient = LinearGradient {
-                        colors: [box_color, box_color * 0.5],
-                        start_position: vec2(0.0, rect_size.y * 0.5),
-                        end_position: vec2(0.0, -rect_size.y * 0.5),
-                    };
-
-                    let radial_gradient = RadialGradient {
-                        colors: [box_color, box_color * 0.5],
-                        center_position: Vec2::ZERO,
-                        end_radius: rect_size.x * 0.702,
-                        start_radius: 0.0,
-                    };
-
-                    if i % 2 == 0 && !control_state.is_hovered(control_id) && !select_hover {
-                        element_builder = element_builder.set_rotation(
-                            get_engine_data(public_data).time.time * (2.0 + (i % 7) as f32),
-                        );
-                    }
+                    element_builder =
+                        if i % 2 == 0 && !control_state.is_hovered(control_id) && !select_hover {
+                            let rot =
+                                get_engine_data(public_data).time.time * (2.0 + (i % 7) as f32);
+                            element_builder.set_rotation(rot)
+                        } else {
+                            element_builder
+                        };
 
                     if i % 4 == 0 {
-                        element_builder =
-                            element_builder.set_linear_gradient(linear_gradient.into());
-                    }
-                    if i % 5 == 0 || i % 5 == 4 {
-                        element_builder =
-                            element_builder.set_radial_gradient(radial_gradient.into());
-                    }
-
-                    element_builder.build(gui_rects);
+                        let linear_gradient = LinearGradient {
+                            colors: [box_color, box_color * 0.5],
+                            start_position: vec2(0.0, rect_size.y * 0.5),
+                            end_position: vec2(0.0, -rect_size.y * 0.5),
+                        };
+                        element_builder.set_linear_gradient(linear_gradient.into())
+                    }else if i % 5 == 0 || i % 5 == 4 {
+                        let radial_gradient = RadialGradient {
+                            colors: [box_color, box_color * 0.5],
+                            center_position: Vec2::ZERO,
+                            end_radius: rect_size.x * 0.702,
+                            start_radius: 0.0,
+                        };
+                        element_builder.set_radial_gradient(radial_gradient.into())
+                    }else{
+                        element_builder
+                    }.build(gui_rects);
                 }
             }
 
