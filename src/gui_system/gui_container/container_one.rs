@@ -17,7 +17,7 @@ use crate::{
     gui_system::{
         control,
         control::{slider, ControlId, ControlState, State, Uiid},
-        window_layout::{depth_offset, GUI_ACTIVE_COLOR},
+        window_layout::depth_offset,
         ContainerInfo,
     },
     public_data::{
@@ -34,7 +34,17 @@ struct BoxData {
     pub box_color: Vec<RGBA>,
 }
 
-struct InstanceData {
+impl BoxData {
+    pub fn new(count: usize, position: Vec2, color: RGBA) -> Self {
+        Self {
+            box_size: 0.0,
+            box_positions: vec![position; count as usize],
+            box_color: vec![color; count as usize],
+        }
+    }
+}
+
+struct AnimationData {
     pub select_hover_boxes: Vec<bool>,
     pub current_values: BoxData,
     pub target_values: BoxData,
@@ -44,27 +54,44 @@ struct InstanceData {
     pub end_position: Vec2,
 }
 
+impl AnimationData {
+    pub fn new(count: usize, position: Vec2, color: RGBA) -> Self {
+        Self {
+            select_hover_boxes: vec![false; count as usize],
+            current_values: BoxData::new(count, position, color),
+            target_values: BoxData::new(count, position, color),
+            multi_select_active_id: None,
+            start_position: Vec2::ZERO,
+            end_position: Vec2::ZERO,
+            box_indices: (0..count as usize).collect(),
+        }
+    }
+}
+
 pub struct ContainerOne {
     pub name: String,
     pub value: f32,
     pub color: RGBA,
-    pub count: u32,
+    pub count: usize,
 
-    slider_instance: usize,
+    slider_instance: Uuid,
     slider_active_id: Option<Uuid>,
-    instance_anim_data: HashMap<usize, InstanceData>,
+    anim_data: AnimationData,
+
+    pub instance_id: Uuid,
 }
 
 impl ContainerOne {
-    pub fn new(name: String, value: f32, color: RGBA, count: u32) -> Self {
+    pub fn new(name: String, value: f32, color: RGBA, count: usize) -> Self {
         Self {
             name,
             value,
             color,
             count,
-            slider_instance: 0,
+            slider_instance: Uuid::nil(),
             slider_active_id: None,
-            instance_anim_data: HashMap::new(),
+            anim_data: AnimationData::new(count, Vec2::ZERO, color),
+            instance_id: Uuid::new_v4(),
         }
     }
 }
@@ -92,7 +119,6 @@ impl GUIContainer for ContainerOne {
         public_data: &PublicData,
         container_info: ContainerInfo,
         control_state: &mut ControlState,
-        instance_index: usize,
     ) {
         const CONTAINER_MARGIN: f32 = 10.0;
 
@@ -112,83 +138,77 @@ impl GUIContainer for ContainerOne {
                 //BACKGROUND SELECTION BOX
                 let background_control = control_state.get_id();
                 if let UIEvent::Update = event {
-                    if let Some(data) = self.instance_anim_data.get(&instance_index) {
-                        if data.multi_select_active_id.is_some() {
-                            control_state.hold_active_state(data.multi_select_active_id.unwrap());
-                        } else {
-                            control_state
-                                .set_hot_with_rect(background_control, &container_info.rect);
-                        }
+                    let data = &mut self.anim_data;
+                    if data.multi_select_active_id.is_some() {
+                        control_state.hold_active_state(data.multi_select_active_id.unwrap());
+                    } else {
+                        control_state.set_hot_with_rect(background_control, &container_info.rect);
                     }
                 }
 
                 if let UIEvent::MouseButton(mouse_input) = event {
                     if mouse_input.is_left_pressed() {
-                        if let Some(data) = self.instance_anim_data.get_mut(&instance_index) {
-                            data.multi_select_active_id =
-                                control_state.set_active(background_control);
-                            if data.multi_select_active_id.is_some() {
-                                data.start_position = control_state.last_cursor_position.unwrap();
-                                data.end_position = data.start_position;
-                            }
+                        let data = &mut self.anim_data;
+                        data.multi_select_active_id = control_state.set_active(background_control);
+                        if data.multi_select_active_id.is_some() {
+                            data.start_position = control_state.last_cursor_position.unwrap();
+                            data.end_position = data.start_position;
                         }
                     }
                     if mouse_input.is_left_released() {
-                        if let Some(data) = self.instance_anim_data.get_mut(&instance_index) {
-                            if control_state.is_active(data.multi_select_active_id) {
-                                let random_color = HSLA {
-                                    h: rwge::rand::random::<f32>() * 360.0,
-                                    s: 0.6,
-                                    l: 0.5,
-                                    a: 1.0,
-                                }
-                                .into();
-                                for (box_hover, box_color) in data
-                                    .select_hover_boxes
-                                    .iter_mut()
-                                    .zip(data.target_values.box_color.iter_mut())
-                                {
-                                    if *box_hover {
-                                        *box_color = random_color;
-                                    }
-                                    *box_hover = false;
-                                }
-
-                                data.multi_select_active_id = None;
+                        let data = &mut self.anim_data;
+                        if control_state.is_active(data.multi_select_active_id) {
+                            let random_color = HSLA {
+                                h: rwge::rand::random::<f32>() * 360.0,
+                                s: 0.6,
+                                l: 0.5,
+                                a: 1.0,
                             }
+                            .into();
+                            for (box_hover, box_color) in data
+                                .select_hover_boxes
+                                .iter_mut()
+                                .zip(data.target_values.box_color.iter_mut())
+                            {
+                                if *box_hover {
+                                    *box_color = random_color;
+                                }
+                                *box_hover = false;
+                            }
+
+                            data.multi_select_active_id = None;
                         }
                     }
                 }
 
                 if let UIEvent::MouseMove { corrected, .. } = event {
-                    if let Some(data) = self.instance_anim_data.get_mut(&instance_index) {
-                        if control_state.is_active(data.multi_select_active_id) {
-                            let box_size =
-                                vec2(data.current_values.box_size, data.current_values.box_size);
-                            let select_rect = selection_rect(
-                                data.start_position,
-                                data.end_position,
-                                &container_info.rect,
-                            );
-                            for (box_pos, box_hover) in data
-                                .current_values
-                                .box_positions
-                                .iter()
-                                .zip(data.select_hover_boxes.iter_mut())
-                            {
-                                let box_rect = Rect {
-                                    position: *box_pos,
-                                    size: box_size,
-                                };
+                    let data = &mut self.anim_data;
+                    if control_state.is_active(data.multi_select_active_id) {
+                        let box_size =
+                            vec2(data.current_values.box_size, data.current_values.box_size);
+                        let select_rect = selection_rect(
+                            data.start_position,
+                            data.end_position,
+                            &container_info.rect,
+                        );
+                        for (box_pos, box_hover) in data
+                            .current_values
+                            .box_positions
+                            .iter()
+                            .zip(data.select_hover_boxes.iter_mut())
+                        {
+                            let box_rect = Rect {
+                                position: *box_pos,
+                                size: box_size,
+                            };
 
-                                if select_rect.intersecting_rect(&box_rect) {
-                                    *box_hover = true;
-                                } else {
-                                    *box_hover = false;
-                                }
+                            if select_rect.intersecting_rect(&box_rect) {
+                                *box_hover = true;
+                            } else {
+                                *box_hover = false;
                             }
-                            data.end_position = *corrected;
                         }
+                        data.end_position = *corrected;
                     }
                 }
             }
@@ -275,32 +295,33 @@ impl GUIContainer for ContainerOne {
                     size: vec2(slider_width, TEXT_HEIGHT),
                 };
 
-                let mut slider_active_id =
-                    if self.slider_active_id.is_some() && self.slider_instance == instance_index {
-                        self.slider_active_id
-                    } else {
-                        None
-                    };
+                let mut slider_active_id = if self.slider_active_id.is_some()
+                    && self.slider_instance == self.instance_id
+                {
+                    self.slider_active_id
+                } else {
+                    None
+                };
 
                 self.value = slider::slider(
                     slider_rect,
                     container_info.rect,
                     self.value,
                     0.0,
-                    200.0,
+                    600.0,
                     &mut slider_active_id,
                     event,
                     control_state,
                 );
                 if let UIEvent::MouseButton(..) = event {
-                    if self.slider_active_id.is_some() && self.slider_instance == instance_index {
+                    if self.slider_active_id.is_some() && self.slider_instance == self.instance_id {
                         if slider_active_id.is_none() {
                             self.slider_active_id = None
                         }
                     } else if self.slider_active_id.is_none() {
                         if slider_active_id.is_some() {
                             self.slider_active_id = slider_active_id;
-                            self.slider_instance = instance_index;
+                            self.slider_instance = self.instance_id;
                         }
                     }
                 }
@@ -338,15 +359,14 @@ impl GUIContainer for ContainerOne {
                     [color_1, color_2],
                     [b_color_1, b_color_2],
                 ) {
-                    if let Some(anim_data) = self.instance_anim_data.get_mut(&instance_index) {
-                        let box_count = anim_data.current_values.box_color.len();
-                        for i in 0..box_count {
-                            let rand_index = rwge::rand::random::<usize>() % box_count;
-                            anim_data.current_values.box_color.swap(i, rand_index);
-                            anim_data.current_values.box_positions.swap(i, rand_index);
-                            anim_data.target_values.box_color.swap(i, rand_index);
-                            anim_data.box_indices.swap(i, rand_index);
-                        }
+                    let anim_data = &mut self.anim_data;
+                    let box_count = anim_data.current_values.box_color.len();
+                    for i in 0..box_count {
+                        let rand_index = rwge::rand::random::<usize>() % box_count;
+                        anim_data.current_values.box_color.swap(i, rand_index);
+                        anim_data.current_values.box_positions.swap(i, rand_index);
+                        anim_data.target_values.box_color.swap(i, rand_index);
+                        anim_data.box_indices.swap(i, rand_index);
                     }
                 }
 
@@ -369,11 +389,7 @@ impl GUIContainer for ContainerOne {
                     for (index, control) in controls.iter().enumerate() {
                         let state = control_state.get_control_state((*control).into());
                         if let State::Hovered = state {
-                            self.instance_anim_data
-                                .get_mut(&instance_index)
-                                .unwrap()
-                                .target_values
-                                .box_color[index] = RGBA::rgb(
+                            self.anim_data.target_values.box_color[index] = RGBA::rgb(
                                 rwge::rand::random(),
                                 rwge::rand::random(),
                                 rwge::rand::random(),
@@ -385,101 +401,68 @@ impl GUIContainer for ContainerOne {
 
             //Update animation values
             if let UIEvent::Update = event {
-                if let Some(anim_data) = self.instance_anim_data.get_mut(&instance_index) {
-                    //Update animation values
-                    // Generate rectangle positions
-                    let allowed_horizontal_size =
-                        container_size.x - (GRID_MARGIN * 2.0) - self.value;
+                let anim_data = &mut self.anim_data;
+                //Update animation values
+                // Generate rectangle positions
+                let allowed_horizontal_size = container_size.x - (GRID_MARGIN * 2.0) - self.value;
 
-                    let horizontal_rect_count = (allowed_horizontal_size
-                        / (GRID_RECT_SIZE + GRID_RECT_PADDING))
-                        .floor()
-                        .max(1.0);
-                    let required_rect_size = (allowed_horizontal_size / horizontal_rect_count)
-                        .max(GRID_RECT_SIZE + GRID_RECT_PADDING);
+                let horizontal_rect_count = (allowed_horizontal_size
+                    / (GRID_RECT_SIZE + GRID_RECT_PADDING))
+                    .floor()
+                    .max(1.0);
+                let required_rect_size = (allowed_horizontal_size / horizontal_rect_count)
+                    .max(GRID_RECT_SIZE + GRID_RECT_PADDING);
 
-                    let v_scaler =
-                        ((container_info.rect.size.x - 2.0 * GRID_MARGIN - GRID_RECT_SIZE)
-                            / (self.value.max(0.1)))
-                        .min(1.0);
-                    let start_position = top_left_position
-                        + vec2(GRID_MARGIN + self.value * 0.5 * v_scaler, -GRID_MARGIN);
+                let v_scaler = ((container_info.rect.size.x - 2.0 * GRID_MARGIN - GRID_RECT_SIZE)
+                    / (self.value.max(0.1)))
+                .min(1.0);
+                let start_position = top_left_position
+                    + vec2(GRID_MARGIN + self.value * 0.5 * v_scaler, -GRID_MARGIN);
 
-                    let horizontal_rect_count = horizontal_rect_count as u32;
-                    let size_padded = required_rect_size;
-                    let size_elem = required_rect_size - GRID_RECT_PADDING;
+                let horizontal_rect_count = horizontal_rect_count as u32;
+                let size_padded = required_rect_size;
+                let size_elem = required_rect_size - GRID_RECT_PADDING;
 
-                    anim_data.target_values.box_size = size_elem;
-                    for (index, target) in
-                        anim_data.target_values.box_positions.iter_mut().enumerate()
-                    {
-                        let h_index = index as u32 % horizontal_rect_count;
-                        let v_index = index as u32 / horizontal_rect_count;
+                anim_data.target_values.box_size = size_elem;
+                for (index, target) in anim_data.target_values.box_positions.iter_mut().enumerate()
+                {
+                    let h_index = index as u32 % horizontal_rect_count;
+                    let v_index = index as u32 / horizontal_rect_count;
 
-                        *target = start_position
-                            + vec2(size_padded * 0.5, -size_padded * 0.5)
-                            + vec2(size_padded * h_index as f32, -size_padded * v_index as f32);
-                    }
+                    *target = start_position
+                        + vec2(size_padded * 0.5, -size_padded * 0.5)
+                        + vec2(size_padded * h_index as f32, -size_padded * v_index as f32);
+                }
 
-                    //println!("Current delta time {}", (get_time(public_data).delta_time_millis));
-                    let anim_scaler = (get_time(public_data).delta_time_millis) / 11.0;
-                    //Update current values
-                    anim_data.current_values.box_size = lerp_f32(
-                        anim_data.current_values.box_size,
-                        anim_data.target_values.box_size,
-                        0.1 * anim_scaler,
-                    );
-                    for (current, target) in anim_data
-                        .current_values
-                        .box_positions
-                        .iter_mut()
-                        .zip(anim_data.target_values.box_positions.iter())
-                    {
-                        *current = Vec2::lerp(*current, *target, 0.1 * anim_scaler);
-                    }
+                //println!("Current delta time {}", (get_time(public_data).delta_time_millis));
+                let anim_scaler = (get_time(public_data).delta_time_millis) / 11.0;
+                //Update current values
+                anim_data.current_values.box_size = lerp_f32(
+                    anim_data.current_values.box_size,
+                    anim_data.target_values.box_size,
+                    0.1 * anim_scaler,
+                );
+                for (current, target) in anim_data
+                    .current_values
+                    .box_positions
+                    .iter_mut()
+                    .zip(anim_data.target_values.box_positions.iter())
+                {
+                    *current = Vec2::lerp(*current, *target, 0.1 * anim_scaler);
+                }
 
-                    for (current, target) in anim_data
-                        .current_values
-                        .box_color
-                        .iter_mut()
-                        .zip(anim_data.target_values.box_color.iter())
-                    {
-                        *current = current.lerp_rgba(target, 0.05 * anim_scaler);
-                    }
-                } else {
-                    //Create animation values if there are none for this instance
-                    let current = BoxData {
-                        box_size: 0.0,
-                        box_positions: vec![top_left_position; self.count as usize],
-                        box_color: vec![self.color; self.count as usize],
-                    };
-
-                    let target = BoxData {
-                        box_size: 0.0,
-                        box_positions: vec![top_left_position; self.count as usize],
-                        box_color: vec![self.color; self.count as usize],
-                    };
-                    self.instance_anim_data.insert(
-                        instance_index,
-                        InstanceData {
-                            select_hover_boxes: vec![false; self.count as usize],
-                            current_values: current,
-                            target_values: target,
-                            multi_select_active_id: None,
-                            start_position: Vec2::ZERO,
-                            end_position: Vec2::ZERO,
-                            box_indices: (0..self.count as usize).collect(),
-                        },
-                    );
+                for (current, target) in anim_data
+                    .current_values
+                    .box_color
+                    .iter_mut()
+                    .zip(anim_data.target_values.box_color.iter())
+                {
+                    *current = current.lerp_rgba(target, 0.05 * anim_scaler);
                 }
             }
 
             if let UIEvent::Update = event {
-                let ref anim_data = self
-                    .instance_anim_data
-                    .get(&instance_index)
-                    .unwrap()
-                    .current_values;
+                let anim_data = &mut self.anim_data.current_values;
                 for (index, position) in anim_data.box_positions.iter().enumerate() {
                     let control_id = controls[index];
 
@@ -509,7 +492,7 @@ impl GUIContainer for ContainerOne {
             }
 
             if let UIEvent::Render { gui_rects, .. } = event {
-                let instance_data = self.instance_anim_data.get(&instance_index).unwrap();
+                let instance_data = &mut self.anim_data;
                 let ref anim_data = instance_data.current_values;
                 let box_size = anim_data.box_size;
                 for (control_index, (((position, color), select_hover), index)) in anim_data
@@ -580,7 +563,7 @@ impl GUIContainer for ContainerOne {
                             end_position: vec2(0.0, -rect_size.y * 0.5),
                         };
                         element_builder.set_linear_gradient(linear_gradient.into())
-                    }else if i % 5 == 0 || i % 5 == 4 {
+                    } else if i % 5 == 0 || i % 5 == 4 {
                         let radial_gradient = RadialGradient {
                             colors: [box_color, box_color * 0.5],
                             center_position: Vec2::ZERO,
@@ -588,9 +571,10 @@ impl GUIContainer for ContainerOne {
                             start_radius: 0.0,
                         };
                         element_builder.set_radial_gradient(radial_gradient.into())
-                    }else{
+                    } else {
                         element_builder
-                    }.build(gui_rects);
+                    }
+                    .build(gui_rects);
                 }
             }
 
@@ -599,74 +583,78 @@ impl GUIContainer for ContainerOne {
                 extra_render_steps,
             } = event
             {
-                if let Some(data) = self.instance_anim_data.get_mut(&instance_index) {
-                    if data.multi_select_active_id.is_some() {
-                        let state = control_state.get_control_state(ControlId::Active(
-                            data.multi_select_active_id.unwrap(),
-                        ));
-                        if let State::Active = state {
-                            let select_rect = selection_rect(
-                                data.start_position,
-                                data.end_position,
-                                &container_info.rect,
-                            );
+                let data = &mut self.anim_data;
+                if data.multi_select_active_id.is_some() {
+                    let state = control_state.get_control_state(ControlId::Active(
+                        data.multi_select_active_id.unwrap(),
+                    ));
+                    if let State::Active = state {
+                        let select_rect = selection_rect(
+                            data.start_position,
+                            data.end_position,
+                            &container_info.rect,
+                        );
 
-                            ElementBuilder::new_with_rect(select_rect)
-                                .set_color(RGBA::GREEN.set_alpha(0.25).into())
-                                .set_border(Some(Border {
-                                    size: 2,
-                                    color: RGBA::GREEN.set_alpha(0.5).into(),
-                                }))
-                                .set_rect_mask(container_info.rect.into())
-                                .build(gui_rects);
+                        ElementBuilder::new_with_rect(select_rect)
+                            .set_color(RGBA::GREEN.set_alpha(0.25).into())
+                            .set_border(Some(Border {
+                                size: 2,
+                                color: RGBA::GREEN.set_alpha(0.5).into(),
+                            }))
+                            .set_rect_mask(container_info.rect.into())
+                            .build(gui_rects);
 
-                            let hover_count =
-                                data.select_hover_boxes.iter().fold(0, |acc, hover| {
-                                    if *hover {
-                                        acc + 1
-                                    } else {
-                                        acc
-                                    }
-                                });
+                        let hover_count =
+                            data.select_hover_boxes.iter().fold(0, |acc, hover| {
+                                if *hover {
+                                    acc + 1
+                                } else {
+                                    acc
+                                }
+                            });
 
-                            let font_collection = &get_font_collections(public_data)[0];
-                            let text = format!("count {hover_count}");
-                            let (font_elems, font_rect) =
-                                create_single_line(text.as_str(), 16.0, font_collection, 0, 0.0);
-                            const TEXT_PADDING_H: f32 = 12.0;
-                            const TEXT_PADDING_V: f32 = 6.0;
+                        let font_collection = &get_font_collections(public_data)[0];
+                        let text = format!("count {hover_count}");
+                        let (font_elems, font_rect) =
+                            create_single_line(text.as_str(), 16.0, font_collection, 0, 0.0);
+                        const TEXT_PADDING_H: f32 = 12.0;
+                        const TEXT_PADDING_V: f32 = 6.0;
 
-                            extra_render_steps.push(
-                                Box::new(move |gui_rects| {
-                                    ElementBuilder::new_with_rect(Rect {
-                                        position: select_rect.position,
-                                        size: font_rect.size
-                                            + vec2(TEXT_PADDING_H * 2.0, TEXT_PADDING_V * 2.0),
-                                    })
-                                    .set_color(RGBA::rrr1(0.15).into())
-                                    .set_round_rect(
-                                        BorderRadius::ForAll(
-                                            TEXT_PADDING_V + font_rect.size.y * 0.5,
-                                        )
-                                        .into(),
-                                    )
-                                    .set_border(Some(Border {
-                                        size: 2,
-                                        color: RGBA::WHITE.into(),
-                                    }))
-                                    .build(gui_rects);
-
-                                    for elem in font_elems {
-                                        ElementBuilder::new_with_rect(elem.rect.offset_position(
-                                            select_rect.position - font_rect.size * 0.5,
-                                        ))
-                                        .set_sdffont(elem.tx_slice.into())
-                                        .build(gui_rects);
-                                    }
-                                }),
-                                container_info.depth_range.0 + depth_offset::SELECT_COUNT,
+                        let mut label_box_elements = Vec::new();
+                        label_box_elements.push(
+                            ElementBuilder::new_with_rect(Rect {
+                                position: select_rect.position,
+                                size: font_rect.size
+                                    + vec2(TEXT_PADDING_H * 2.0, TEXT_PADDING_V * 2.0),
+                            })
+                            .set_color(RGBA::rrr1(0.15).into())
+                            .set_round_rect(
+                                BorderRadius::ForAll(TEXT_PADDING_V + font_rect.size.y * 0.5)
+                                    .into(),
                             )
+                            .set_border(Some(Border {
+                                size: 2,
+                                color: RGBA::WHITE.into(),
+                            })),
+                        );
+
+                        for elem in font_elems {
+                            label_box_elements.push(
+                                ElementBuilder::new_with_rect(elem.rect.offset_position(
+                                    select_rect.position - font_rect.size * 0.5,
+                                ))
+                                .set_sdffont(elem.tx_slice.into())
+                            );
                         }
+
+                        extra_render_steps.push(
+                            Box::new(move |gui_rects| {
+                                for elem in label_box_elements{
+                                    elem.build(gui_rects);
+                                }
+                            }),
+                            container_info.depth_range.0 + depth_offset::SELECT_COUNT,
+                        )
                     }
                 }
             }

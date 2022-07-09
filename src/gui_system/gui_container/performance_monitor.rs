@@ -106,7 +106,6 @@ impl GUIContainer for PerformanceMonitor {
         public_data: &crate::public_data::PublicData,
         container_info: crate::gui_system::ContainerInfo,
         control_state: &mut crate::gui_system::control::ControlState,
-        instance_index: usize,
     ) {
         const COLUMN_HEIGHT: f32 = 100.0;
         const MIN_COLUMN_WIDTH: f32 = 20.0;

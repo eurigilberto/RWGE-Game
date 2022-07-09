@@ -38,6 +38,18 @@ rwge::create_custom_key!(
     WindowSlotKey;
 );
 
+impl Into<LayoutOrTabKey> for TabsSlotKey{
+    fn into(self) -> LayoutOrTabKey {
+        LayoutOrTabKey::TabKey(self)
+    }
+}
+
+impl Into<LayoutOrTabKey> for LayoutSlotKey{
+    fn into(self) -> LayoutOrTabKey {
+        LayoutOrTabKey::LayoutKey(self)
+    }
+}
+
 pub struct TabLayoutInfo {
     key: TabsSlotKey,
     container_info: ContainerInfo,
@@ -78,11 +90,15 @@ pub mod depth_offset {
 impl WindowSystem {
     pub fn new() -> Self {
         Self {
+            //gui instance
             gui_container_slotmap: Slotmap::<Box<dyn GUIContainer>>::new_with_capacity(20),
+            //layout
             tabs_slotmap: Slotmap::<TabsContainer>::new_with_capacity(10),
             layout_slotmap: Slotmap::<LayoutElement>::new_with_capacity(20),
+            //windowing
             window_collection: Slotmap::<UIWindow>::new_with_capacity(5),
             window_order: Vec::<WindowSlotKey>::with_capacity(5),
+            //control
             control_state: ControlState::new(),
         }
     }
@@ -105,25 +121,18 @@ impl WindowSystem {
         window_key
     }
 
-    pub fn create_vertical_layout_element(
+    pub fn push_vertical(
         &mut self,
         children: Vec<DividedElement>,
     ) -> Option<LayoutSlotKey> {
         LayoutElement::create_vertical(children, &mut self.layout_slotmap)
     }
 
-    pub fn create_horizontal_layout_element(
+    pub fn push_horizontal(
         &mut self,
         children: Vec<DividedElement>,
     ) -> Option<LayoutSlotKey> {
         LayoutElement::create_horizontal(children, &mut self.layout_slotmap)
-    }
-
-    pub fn create_single_layout_element(&mut self, tab_key: TabsSlotKey) -> Option<LayoutSlotKey> {
-        match self.layout_slotmap.push(LayoutElement::Single(tab_key)) {
-            Some(key) => Some(LayoutSlotKey(key)),
-            None => None,
-        }
     }
 
     pub fn push_gui_container(
@@ -219,7 +228,6 @@ impl WindowSystem {
                 public_data,
                 gui_container_info.container_info,
                 control_state,
-                index,
             );
         }
     }

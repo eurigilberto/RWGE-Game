@@ -15,14 +15,34 @@ use self::active_divider::{ActiveDivider, DivData};
 use super::{depth_offset, LayoutOrTabInfo, LayoutOrTabKey, LayoutSlotKey, TabsSlotKey};
 
 pub struct DividedElement {
-    pub layout_key: LayoutSlotKey,
+    pub layout_or_tab_key: LayoutOrTabKey,
     pub size: f32,
+}
+
+impl DividedElement {
+    pub fn new(key: LayoutOrTabKey, size: f32) -> Self {
+        Self {
+            layout_or_tab_key: key,
+            size,
+        }
+    }
+    pub fn new_layout(key: LayoutSlotKey, size: f32) -> Self {
+        Self {
+            layout_or_tab_key: key.into(),
+            size,
+        }
+    }
+    pub fn new_tab(key: TabsSlotKey, size: f32) -> Self {
+        Self {
+            layout_or_tab_key: key.into(),
+            size,
+        }
+    }
 }
 
 pub mod active_divider;
 
 pub enum LayoutElement {
-    Single(TabsSlotKey),
     Horizontal {
         children: Vec<DividedElement>,
         active_divider: Option<ActiveDivider>,
@@ -62,22 +82,27 @@ struct ChildrenInfo {
 const DIVISION_SIZE: f32 = 2.0;
 
 impl LayoutElement {
-    pub fn validate_children(//This does not preoprtly validate the childrens
+    pub fn validate_children(
+        //This does not preoprtly validate the childrens
         &self,
         children: &Vec<DividedElement>,
         layout_elements: &Slotmap<LayoutElement>,
     ) -> bool {
         for child in children {
-            let layout_element = layout_elements.get_value(&child.layout_key.0).unwrap();
-            match (self, layout_element) {
-                (LayoutElement::Single(_), _) => {
-                    panic!("Single cannot have divided element as children")
+            match child.layout_or_tab_key {
+                LayoutOrTabKey::TabKey(_) => return true,
+                LayoutOrTabKey::LayoutKey(layout_key) => {
+                    let layout_element = layout_elements.get_value(&layout_key).unwrap();
+                    match (self, layout_element) {
+                        (LayoutElement::Horizontal { .. }, LayoutElement::Horizontal { .. }) => {
+                            return false
+                        }
+                        (LayoutElement::Vertical { .. }, LayoutElement::Vertical { .. }) => {
+                            return false
+                        }
+                        (_, _) => {}
+                    }
                 }
-                (LayoutElement::Horizontal { .. }, LayoutElement::Horizontal { .. }) => {
-                    return false
-                }
-                (LayoutElement::Vertical { .. }, LayoutElement::Vertical { .. }) => return false,
-                (_, _) => {}
             }
         }
         if children.len() == 1 {
@@ -88,9 +113,6 @@ impl LayoutElement {
 
     pub fn push_children(&mut self, new_children: Vec<DividedElement>) {
         match self {
-            LayoutElement::Single(_) => {
-                panic!("Should not be pushing divided elements to a single")
-            }
             LayoutElement::Horizontal { children, .. } => {
                 children.reserve(new_children.len());
                 children.extend(new_children);
@@ -150,18 +172,6 @@ impl LayoutElement {
         let size = container_info.rect.size;
         let position = container_info.rect.position;
         match self {
-            LayoutElement::Single(tab_container) => {
-                // How to render the tab?
-                let mut tab = Vec::<LayoutOrTabInfo>::new();
-                tab.push(LayoutOrTabInfo {
-                    key: LayoutOrTabKey::TabKey(tab_container.clone()),
-                    container_info: ContainerInfo {
-                        rect: Rect { position, size },
-                        depth_range: container_info.depth_range,
-                    },
-                });
-                tab
-            }
             LayoutElement::Horizontal {
                 children,
                 active_divider,
@@ -416,7 +426,7 @@ fn compute_children_sizes(
         let child_position = start_pos + child_size * 0.5 * sign.as_f32();
 
         children_sizes.push(ChildrenInfo {
-            key: LayoutOrTabKey::LayoutKey(child.layout_key),
+            key: child.layout_or_tab_key,
             size: child_size,
             position: child_position,
         });

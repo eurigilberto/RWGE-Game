@@ -150,7 +150,6 @@ impl GUIContainer for TextAnimation {
         public_data: &crate::public_data::PublicData,
         container_info: crate::gui_system::ContainerInfo,
         control_state: &mut crate::gui_system::control::ControlState,
-        instance_index: usize,
     ) {
         //initialize public data struct
         if self.first_update_done == false {

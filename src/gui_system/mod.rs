@@ -1,11 +1,6 @@
 mod testing_structure;
 use testing_structure::test_screen;
 
-use std::{
-    any::{Any, TypeId},
-    ops::Range,
-};
-
 mod control;
 pub mod gui_container;
 mod window_layout;
@@ -25,9 +20,8 @@ impl ContainerInfo {
 
 use rwge::{
     color::RGBA,
-    glam::{uvec2, vec2, UVec2, Vec2},
+    glam::{UVec2, Vec2},
     gui::rect_ui::{
-        element::{create_new_rect_element, ColoringType, MaskType},
         event::UIEvent,
         GUIRects, Rect,
     },
@@ -36,7 +30,10 @@ use rwge::{
 };
 
 use crate::{
-    gui_system::gui_container::{text_animation::TextAnimation, text_layout_test::TextLayoutTest},
+    gui_system::{
+        gui_container::{text_animation::TextAnimation, text_layout_test::TextLayoutTest},
+        window_layout::TabsSlotKey,
+    },
     public_data::{
         utils::{get_engine_data, get_render_texture},
         PublicData,
@@ -59,43 +56,76 @@ pub struct GUISystem {
 
 impl GUISystem {
     pub fn new(screen_size: UVec2) -> Self {
-        let mut container_collection = Slotmap::<Box<dyn GUIContainer>>::new_with_capacity(20);
+        let mut container_collection = Slotmap::<Box<dyn GUIContainer>>::new_with_capacity(30);
 
         let mut window_layouting = WindowSystem::new();
 
-        const ELLIPSIS: char = '…';
+        //const ELLIPSIS: char = '…';
+        const COL_1: RGBA = RGBA::rgb(0.0, 0.25, 0.75);
+        const COL_2: RGBA = RGBA::rgb(0.75, 0.25, 0.0);
+        const COL_3: RGBA = RGBA::rgb(0.1, 0.75, 0.25);
 
-        let c1_key = window_layouting
-            .push_gui_container(Box::new(ContainerOne::new(
-                String::from("Wind C1"),
-                0.0,
-                RGBA::rgb(0.0, 0.25, 0.75),
-                50,
-            )))
-            .unwrap();
+        let window_box_props = vec![
+            ("W | 1", COL_1, 50),
+            ("W | 2", COL_2, 500),
+            //-------------------------||
+            ("W | 3", COL_1, 50),
+            ("W | 4", COL_2, 500),
+            ("W | 5", COL_3, 100),
+            //-------------------------||
+            ("W | 6", COL_1, 50),
+            ("W | 7", COL_2, 500),
+            //-------------------------||
+            ("W | 8", COL_1, 50),
+            ("W | 9", COL_2, 500),
+            //-------------------------||
+            ("W | 10", COL_1, 50),
+            ("W | 11", COL_2, 100),
+            ("W | 12", COL_3, 500),
+            //-------------------------||
+            ("W | 13", COL_1, 50),
+            ("W | 14", COL_2, 500),
+            //-------------------------||
+            ("W | 15", COL_1, 50),
+            ("W | 16", COL_2, 100),
+            ("W | 17", COL_3, 500),
+        ];
 
-        let c2_key = window_layouting
-            .push_gui_container(Box::new(ContainerOne::new(
-                String::from("Wind C2"),
-                0.0,
-                RGBA::rgb(0.75, 0.25, 0.0),
-                500,
-            )))
-            .unwrap();
+        let tab_groups: Vec<Vec<usize>> = vec![
+            vec![0, 1],
+            vec![2, 3, 4],
+            vec![5, 6],
+            vec![7, 8],
+            vec![9, 10, 11],
+            vec![12, 13],
+            vec![14, 15, 16],
+        ];
 
-        let c3_key = window_layouting
-            .push_gui_container(Box::new(ContainerOne::new(
-                String::from("Wind C3"),
-                0.0,
-                RGBA::rgb(0.1, 0.75, 0.25),
-                100,
-            )))
-            .unwrap();
+        let window_box_keys: Vec<GUIContainerSlotkey> = window_box_props
+            .iter()
+            .map(|w_box| {
+                window_layouting
+                    .push_gui_container(Box::new(ContainerOne::new(
+                        String::from(w_box.0),
+                        0.0,
+                        w_box.1,
+                        w_box.2,
+                    )))
+                    .unwrap()
+            })
+            .collect();
+
+        let tab_group_keys: Vec<TabsSlotKey> = tab_groups
+            .iter()
+            .map(|group| {
+                window_layouting
+                    .create_tab(group.iter().map(|g_id| window_box_keys[*g_id]).collect())
+            })
+            .collect();
 
         let perf_key = window_layouting
             .push_gui_container(Box::new(PerformanceMonitor::new()))
             .unwrap();
-
         let text_layout_key = window_layouting
             .push_gui_container(Box::new(TextLayoutTest::new()))
             .unwrap();
@@ -103,139 +133,72 @@ impl GUISystem {
             .push_gui_container(Box::new(TextAnimation::new()))
             .unwrap();
 
-        let tab_1 = window_layouting.create_tab(vec![c1_key, c2_key]);
-        let tab_2 = window_layouting.create_tab(vec![c2_key, c3_key, c1_key]);
-        let tab_3 = window_layouting.create_tab(vec![c3_key, c2_key]);
         let perf_tab = window_layouting.create_tab(vec![perf_key]);
-        let text_layout = window_layouting.create_tab(vec![text_layout_key]);
-        let text_animation = window_layouting.create_tab(vec![text_animation_key]);
+        let text_layout_tab = window_layouting.create_tab(vec![text_layout_key]);
+        let text_animation_tab = window_layouting.create_tab(vec![text_animation_key]);
 
-        let single_1 = window_layouting
-            .create_single_layout_element(tab_1)
-            .unwrap();
-        let single_2 = window_layouting
-            .create_single_layout_element(tab_2)
-            .unwrap();
-        let single_3 = window_layouting
-            .create_single_layout_element(tab_3)
-            .unwrap();
-        let single_perf = window_layouting
-            .create_single_layout_element(perf_tab)
-            .unwrap();
-        let single_text_lay = window_layouting
-            .create_single_layout_element(text_layout)
-            .unwrap();
-        let single_text_animation = window_layouting
-            .create_single_layout_element(text_animation)
-            .unwrap();
-
-        let perf_text_anim_vert = window_layouting
-            .create_vertical_layout_element(vec![
-                DividedElement {
-                    layout_key: single_perf,
-                    size: 1.0,
-                },
-                DividedElement {
-                    layout_key: single_text_animation,
-                    size: 1.0,
-                },
+        let mut wl = window_layouting;
+        let v1 = DividedElement::new_layout(
+            wl.push_vertical(vec![
+                DividedElement::new_tab(tab_group_keys[4], 1.5),
+                DividedElement::new_tab(tab_group_keys[5], 1.0),
+                DividedElement::new_tab(tab_group_keys[6], 2.0),
             ])
-            .unwrap();
+            .unwrap(),
+            1.0,
+        );
 
-        let perf_text_horiz = window_layouting
-            .create_horizontal_layout_element(vec![
-                DividedElement {
-                    layout_key: perf_text_anim_vert,
-                    size: 1.0,
-                },
-                DividedElement {
-                    layout_key: single_text_lay,
-                    size: 1.2,
-                },
+        let v2 = {
+            let d_1 = DividedElement::new_layout(
+                wl.push_vertical(vec![
+                    DividedElement::new_tab(perf_tab, 1.0),
+                    DividedElement::new_tab(text_animation_tab, 1.0),
+                ])
+                .unwrap(),
+                1.0,
+            );
+            let tl = DividedElement::new_tab(text_layout_tab, 1.2);
+            let d_2 = DividedElement::new_layout(
+                wl.push_horizontal(vec![d_1, tl])
+                    .unwrap(),
+                2.0,
+            );
+
+            DividedElement::new_layout(
+                wl.push_vertical(vec![
+                    DividedElement::new_tab(tab_group_keys[0], 1.0),
+                    d_2,
+                ])
+                .unwrap(),
+                2.0,
+            )
+        };
+
+        let h1 = DividedElement::new_layout(
+            wl.push_horizontal(vec![
+                DividedElement::new_tab(tab_group_keys[1], 1.0),
+                DividedElement::new_tab(tab_group_keys[2], 1.0),
             ])
-            .unwrap();
+            .unwrap(),
+            1.0,
+        );
 
-        let center_vertical = window_layouting
-            .create_vertical_layout_element(vec![
-                DividedElement {
-                    layout_key: single_1,
-                    size: 1.0,
-                },
-                DividedElement {
-                    layout_key: perf_text_horiz,
-                    size: 2.0,
-                },
-            ])
-            .unwrap();
+        let v3 = DividedElement::new_layout(
+            wl.push_vertical(vec![DividedElement::new_tab(tab_group_keys[3], 3.0), h1])
+                .unwrap(),
+            1.25,
+        );
 
-        let horizontal_1 = window_layouting
-            .create_horizontal_layout_element(vec![
-                DividedElement {
-                    layout_key: single_1,
-                    size: 1.0,
-                },
-                DividedElement {
-                    layout_key: single_2,
-                    size: 1.0,
-                },
-            ])
-            .unwrap();
+        let horizontal_2 = wl.push_horizontal(vec![v1, v2, v3]).unwrap();
 
-        let vertical_1 = window_layouting
-            .create_vertical_layout_element(vec![
-                DividedElement {
-                    layout_key: single_2,
-                    size: 3.0,
-                },
-                DividedElement {
-                    layout_key: horizontal_1,
-                    size: 1.0,
-                },
-            ])
-            .unwrap();
-
-        let vertical_2 = window_layouting
-            .create_vertical_layout_element(vec![
-                DividedElement {
-                    layout_key: single_1,
-                    size: 1.5,
-                },
-                DividedElement {
-                    layout_key: single_2,
-                    size: 1.0,
-                },
-                DividedElement {
-                    layout_key: single_3,
-                    size: 2.0,
-                },
-            ])
-            .unwrap();
-
-        let horizontal_2 = window_layouting
-            .create_horizontal_layout_element(vec![
-                DividedElement {
-                    layout_key: vertical_2,
-                    size: 1.0,
-                },
-                DividedElement {
-                    layout_key: center_vertical,
-                    size: 2.0,
-                },
-                DividedElement {
-                    layout_key: vertical_1,
-                    size: 1.25,
-                },
-            ])
-            .unwrap();
-
-        let window_1 = window_layouting.create_window(
+        let _ = wl.create_window(
             horizontal_2,
             screen_size.as_vec2(),
             screen_size.as_vec2() * 0.5,
         );
 
         Self {
-            window_layouting,
+            window_layouting: wl,
             container_collection,
             screen_size,
         }

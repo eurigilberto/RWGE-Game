@@ -29,6 +29,7 @@ pub struct TextLayoutTest {
     pub text: String,
     pub last_update_width: f32,
     pub text_height: f32,
+    pub first_line_height: f32,
     pub font_elements: Option<Vec<FontElement>>,
     pub word_rects: Option<Vec<WordRect>>,
 
@@ -53,6 +54,7 @@ impl TextLayoutTest {
             text_height: 0.0,
             font_elements: None,
             word_rects: None,
+            first_line_height: 0.0,
 
             //Font Selector
             update_font: false,
@@ -85,12 +87,14 @@ fn get_padding(font_param: f32) -> Vec2 {
     )
 }
 
-const FONT_SIZE_MIN_MAX: (f32, f32) = (14.0, 126.0);
-const LINE_HEIGHT_MIN_MAX: (f32, f32) = (FONT_SIZE_MIN_MAX.0 + 2.0, FONT_SIZE_MIN_MAX.1 + 2.0);
+const FONT_SIZE_MIN_MAX: (f32, f32) = (14.0, 1024.0);
+const LINE_HEIGHT_MIN_MAX: (f32, f32) = (FONT_SIZE_MIN_MAX.0, FONT_SIZE_MIN_MAX.1);
 const PARA_SEP_MIN_MAX: (f32, f32) = (LINE_HEIGHT_MIN_MAX.0 + 2.0, LINE_HEIGHT_MIN_MAX.1 + 2.0);
 
 impl GUIContainer for TextLayoutTest {
     fn get_name(&self) -> &str {
+        //rwge::glam::Mat4::perspective_lh(fov_y_radians, aspect_ratio, z_near, z_far)
+        //rwge::glam::Mat4::perspective_lh(0.4, 0.5, 0.1, 1000.0).inverse();
         "Text Layout"
     }
 
@@ -100,7 +104,6 @@ impl GUIContainer for TextLayoutTest {
         public_data: &crate::public_data::PublicData,
         container_info: crate::gui_system::ContainerInfo,
         control_state: &mut crate::gui_system::control::ControlState,
-        instance_index: usize,
     ) {
         let scroll_control_id = control_state.get_id();
 
@@ -274,6 +277,7 @@ impl GUIContainer for TextLayoutTest {
                             self.text_height,
                             self.scroll_offset,
                             self.font_param,
+                            self.first_line_height
                         ) + cont_rect.top_left_position();
 
                         if let UIEvent::Update = event {
@@ -320,6 +324,7 @@ impl GUIContainer for TextLayoutTest {
                         self.text_height,
                         self.scroll_offset,
                         self.font_param,
+                        self.first_line_height
                     ) + cont_rect.top_left_position();
 
                     if let Some(hovered) = self.hovered_word {
@@ -352,7 +357,7 @@ impl GUIContainer for TextLayoutTest {
                 if f32::abs(self.last_update_width - cont_rect.width()) > 0.5 || self.update_font {
                     let font_collection =
                         &public_data.collection.get::<Vec<FontCollection>>().unwrap()[0];
-                    let (font_elems, word_rects, text_height) = create_multi_line(
+                    let (font_elems, word_rects, text_height, first_line_height) = create_multi_line(
                         &self.text,
                         lerp_f32(FONT_SIZE_MIN_MAX.0, FONT_SIZE_MIN_MAX.1, self.font_param),
                         font_collection,
@@ -366,6 +371,8 @@ impl GUIContainer for TextLayoutTest {
                         ),
                         lerp_f32(PARA_SEP_MIN_MAX.0, PARA_SEP_MIN_MAX.1, self.font_param),
                     );
+
+                    self.first_line_height = first_line_height;
 
                     self.font_elements = Some(font_elems);
                     self.word_rects = Some(word_rects);
@@ -425,6 +432,7 @@ impl GUIContainer for TextLayoutTest {
                     self.text_height,
                     self.scroll_offset,
                     self.font_param,
+                    self.first_line_height
                 );
 
                 let rect_mask_index = push_rect_mask(cont_rect, gui_rects) as u16;
@@ -500,15 +508,11 @@ fn get_text_render_object(
     text_height: f32,
     scroll_offset: f32,
     font_param: f32,
+    first_line: f32,
 ) -> Vec2 {
-    let line_height = lerp_f32(
-        FONT_SIZE_MIN_MAX.0 + 2.0,
-        FONT_SIZE_MIN_MAX.1 + 2.0,
-        font_param,
-    );
     let max_height = container_height - TEXT_START_OFFSET - TOP_MARGIN;
     let missing_height = text_height - max_height;
-    let text_vertical_offset = missing_height * scroll_offset + -line_height - TOP_MARGIN;
+    let text_vertical_offset = missing_height * scroll_offset + - first_line - TOP_MARGIN;
     vec2(LEFT_MARGIN, text_vertical_offset)
 }
 

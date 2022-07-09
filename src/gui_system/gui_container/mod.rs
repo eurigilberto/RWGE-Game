@@ -23,7 +23,6 @@ pub trait GUIContainer: AsAny {
         public_data: &PublicData,
         container_info: ContainerInfo,
         control_state: &mut ControlState,
-        instance_index: usize
     );
 }
 
