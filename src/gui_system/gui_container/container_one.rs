@@ -547,14 +547,16 @@ impl GUIContainer for ContainerOne {
                         .set_rect_mask(container_info.rect.into())
                         .set_round_rect(BorderRadius::ForAll(roundness).into());
 
-                    element_builder =
+                    element_builder = {
                         if i % 2 == 0 && !control_state.is_hovered(control_id) && !select_hover {
                             let rot =
                                 get_engine_data(public_data).time.time * (2.0 + (i % 7) as f32);
                             element_builder.set_rotation(rot)
                         } else {
                             element_builder
-                        };
+                        }
+                    }
+                    .set_ui_mask(1);
 
                     if i % 4 == 0 {
                         let linear_gradient = LinearGradient {
@@ -585,9 +587,8 @@ impl GUIContainer for ContainerOne {
             {
                 let data = &mut self.anim_data;
                 if data.multi_select_active_id.is_some() {
-                    let state = control_state.get_control_state(ControlId::Active(
-                        data.multi_select_active_id.unwrap(),
-                    ));
+                    let state = control_state
+                        .get_control_state(ControlId::Active(data.multi_select_active_id.unwrap()));
                     if let State::Active = state {
                         let select_rect = selection_rect(
                             data.start_position,
@@ -596,7 +597,7 @@ impl GUIContainer for ContainerOne {
                         );
 
                         ElementBuilder::new_with_rect(select_rect)
-                            .set_color(RGBA::GREEN.set_alpha(0.25).into())
+                            .set_color(RGBA::GREEN.set_alpha(0.2).into())
                             .set_border(Some(Border {
                                 size: 2,
                                 color: RGBA::GREEN.set_alpha(0.5).into(),
@@ -604,14 +605,13 @@ impl GUIContainer for ContainerOne {
                             .set_rect_mask(container_info.rect.into())
                             .build(gui_rects);
 
-                        let hover_count =
-                            data.select_hover_boxes.iter().fold(0, |acc, hover| {
-                                if *hover {
-                                    acc + 1
-                                } else {
-                                    acc
-                                }
-                            });
+                        let hover_count = data.select_hover_boxes.iter().fold(0, |acc, hover| {
+                            if *hover {
+                                acc + 1
+                            } else {
+                                acc
+                            }
+                        });
 
                         let font_collection = &get_font_collections(public_data)[0];
                         let text = format!("count {hover_count}");
@@ -640,16 +640,18 @@ impl GUIContainer for ContainerOne {
 
                         for elem in font_elems {
                             label_box_elements.push(
-                                ElementBuilder::new_with_rect(elem.rect.offset_position(
-                                    select_rect.position - font_rect.size * 0.5,
-                                ))
-                                .set_sdffont(elem.tx_slice.into())
+                                ElementBuilder::new_with_rect(
+                                    elem.rect.offset_position(
+                                        select_rect.position - font_rect.size * 0.5,
+                                    ),
+                                )
+                                .set_sdffont(elem.tx_slice.into()),
                             );
                         }
 
                         extra_render_steps.push(
                             Box::new(move |gui_rects| {
-                                for elem in label_box_elements{
+                                for elem in label_box_elements {
                                     elem.build(gui_rects);
                                 }
                             }),

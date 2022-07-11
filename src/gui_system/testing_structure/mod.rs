@@ -177,6 +177,7 @@ pub fn test_screen(time: &EngineTimeData, gui_rects: &mut GUIRects, screen_size:
         }),
         &mask,
         &color,
+        0
     );
 
     let mask = MaskType::Rect { border: None };
@@ -197,6 +198,7 @@ pub fn test_screen(time: &EngineTimeData, gui_rects: &mut GUIRects, screen_size:
         }),
         &mask,
         &color,
+        0
     );
 
     let mask = MaskType::RoundRect {
@@ -225,6 +227,7 @@ pub fn test_screen(time: &EngineTimeData, gui_rects: &mut GUIRects, screen_size:
         }),
         &mask,
         &color,
+        0
     );
 
     let mask = MaskType::RoundRect {
@@ -252,6 +255,7 @@ pub fn test_screen(time: &EngineTimeData, gui_rects: &mut GUIRects, screen_size:
         }),
         &mask,
         &color,
+        0
     );
 
     let mask = MaskType::Circle { border: None };
@@ -271,6 +275,7 @@ pub fn test_screen(time: &EngineTimeData, gui_rects: &mut GUIRects, screen_size:
         }),
         &mask,
         &color,
+        0
     );
 
     let mask = MaskType::Circle { border: None };
@@ -292,6 +297,7 @@ pub fn test_screen(time: &EngineTimeData, gui_rects: &mut GUIRects, screen_size:
         }),
         &mask,
         &color,
+        0
     );
 
     let mask = MaskType::Circle { border: None };
@@ -314,6 +320,7 @@ pub fn test_screen(time: &EngineTimeData, gui_rects: &mut GUIRects, screen_size:
         }),
         &mask,
         &color,
+        0
     );
 
     let mask = MaskType::Circle { border: None };
@@ -337,6 +344,7 @@ pub fn test_screen(time: &EngineTimeData, gui_rects: &mut GUIRects, screen_size:
         }),
         &mask,
         &color,
+        0
     );
 
     ElementBuilder::new(uvec2(650, 400).as_vec2(), uvec2(300, 150).as_vec2())
