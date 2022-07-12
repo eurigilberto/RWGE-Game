@@ -556,7 +556,7 @@ impl GUIContainer for ContainerOne {
                             element_builder
                         }
                     }
-                    .set_ui_mask(1);
+                    .set_ui_mask((control_index % 256) as u16);
 
                     if i % 4 == 0 {
                         let linear_gradient = LinearGradient {
