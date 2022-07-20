@@ -20,9 +20,9 @@ use crate::{
         window_layout::depth_offset,
         ContainerInfo,
     },
-    public_data::{
+    runtime_data::{
         utils::{get_engine_data, get_font_collections, get_time},
-        PublicData,
+        RuntimeData,
     },
 };
 
@@ -116,7 +116,7 @@ impl GUIContainer for ContainerOne {
     fn handle_event(
         &mut self,
         event: &mut UIEvent,
-        public_data: &PublicData,
+        public_data: &RuntimeData,
         container_info: ContainerInfo,
         control_state: &mut ControlState,
     ) {

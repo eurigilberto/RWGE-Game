@@ -1,14 +1,20 @@
-use rwge::{glam::{Vec2, ivec2, vec2}, gui::rect_ui::{event::UIEvent, element::builder::ElementBuilder, Rect}, uuid::Uuid, color::{RGBA}, winit::dpi::PhysicalPosition};
+use rwge::{
+    color::RGBA,
+    glam::{ivec2, vec2, Vec2},
+    gui::rect_ui::{element::builder::ElementBuilder, event::UIEvent, Rect},
+    uuid::Uuid,
+    winit::dpi::PhysicalPosition,
+};
 
-use crate::public_data::{PublicData, utils::{get_window}};
+use crate::runtime_data::{utils::get_window, RuntimeData};
 
-use super::{ControlState, drag_element::DragElement, ControlId, State};
+use super::{drag_element::DragElement, ControlId, ControlState, State};
 
 pub fn main_window_top_bar(
     position: Vec2,
     size: Vec2,
     event: &mut UIEvent,
-    public_data: &PublicData,
+    runtime_data: &RuntimeData,
     control_state: &mut ControlState,
     active_id: &mut Option<Uuid>,
     drag_element: &mut DragElement,
@@ -44,15 +50,17 @@ pub fn main_window_top_bar(
             match control_state.get_control_state(get_control_id()) {
                 State::Active => {
                     let window_pos = drag_element.compute_element_position();
-                    public_data.push_mut(Box::new(move |public_data| {
-                        let window = public_data
-                            .get_mut::<rwge::winit::window::Window>()
-                            .unwrap();
+                    runtime_data
+                        .public_data
+                        .push_mut(Box::new(move |public_data| {
+                            let window = public_data
+                                .get_mut::<rwge::winit::window::Window>()
+                                .unwrap();
 
-                        let new_position = PhysicalPosition::new(window_pos.x, window_pos.y);
+                            let new_position = PhysicalPosition::new(window_pos.x, window_pos.y);
 
-                        window.set_outer_position(new_position);
-                    }));
+                            window.set_outer_position(new_position);
+                        }));
                     control_state.hold_active_state(active_id.unwrap());
                 }
                 _ => { /* No Op */ }
@@ -61,7 +69,7 @@ pub fn main_window_top_bar(
         UIEvent::MouseMove { raw, .. } => {
             control_state.set_hot_with_rect(control_id, &Rect { position, size });
 
-            let outer_pos = get_window(public_data).outer_position().unwrap();
+            let outer_pos = get_window(runtime_data).outer_position().unwrap();
             let outer_pos = (ivec2(outer_pos.x, outer_pos.y)).as_vec2();
             drag_element.update_position(outer_pos + *raw);
         }
@@ -69,7 +77,8 @@ pub fn main_window_top_bar(
             (rwge::winit::event::MouseButton::Left, rwge::winit::event::ElementState::Pressed) => {
                 *active_id = control_state.set_active(control_id);
                 if let Some(_) = active_id {
-                    let outer_pos = public_data
+                    let outer_pos = runtime_data
+                        .public_data
                         .collection
                         .get::<rwge::winit::window::Window>()
                         .unwrap()
@@ -85,10 +94,10 @@ pub fn main_window_top_bar(
                         Ok(_) => {
                             drag_element.stop_dragging();
                             *active_id = None;
-                        },
+                        }
                         Err(_) => {
                             *active_id = None;
-                        },
+                        }
                     }
                 }
             }

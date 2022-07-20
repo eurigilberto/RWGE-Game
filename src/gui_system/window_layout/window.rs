@@ -20,9 +20,9 @@ use crate::{
         control::{drag_element::DragElement, main_window_top_bar, ControlId, ControlState, State},
         ContainerInfo,
     },
-    public_data::{
+    runtime_data::{
         utils::{get_engine_data, get_window},
-        PublicData,
+        RuntimeData,
     },
 };
 
@@ -83,7 +83,7 @@ pub fn resize_controls(
     position: Vec2,
     size: Vec2,
     event: &mut UIEvent,
-    public_data: &PublicData,
+    runtime_data: &RuntimeData,
     control_state: &mut ControlState,
     active_id: &mut Option<ResizeDrag>,
     container_info: &ContainerInfo
@@ -115,7 +115,7 @@ pub fn resize_controls(
                     if let Some(id) = id {
                         *active_id = Some(ResizeDrag::new(
                             id,
-                            get_engine_data(public_data).screen_size.as_vec2(),
+                            get_engine_data(runtime_data).screen_size.as_vec2(),
                         ));
                     }
                 }
@@ -140,7 +140,7 @@ pub fn resize_controls(
 
                     if let Some(new_size) = active_id.as_mut().unwrap().get_size() {
                         let new_size = new_size;
-                        public_data.push_mut(Box::new(move |public_data| {
+                        runtime_data.push_pub_mut(Box::new(move |public_data| {
                             let wind = public_data
                                 .get_mut::<rwge::winit::window::Window>()
                                 .unwrap();
@@ -159,7 +159,6 @@ pub fn resize_controls(
                 }
             }
             UIEvent::Render {
-                gui_rects,
                 extra_render_steps,
                 ..
             } => {
@@ -210,7 +209,7 @@ impl UIWindow {
     pub fn handle_event(
         &mut self,
         event: &mut UIEvent,
-        public_data: &PublicData,
+        public_data: &RuntimeData,
         control_state: &mut ControlState,
         depth_range: (u32, u32),
     ) -> LayoutOrTabInfo {

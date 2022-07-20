@@ -12,7 +12,7 @@ use rwge::{
     math_utils::lerp_f32,
 };
 
-use crate::public_data::EngineTimeData;
+use crate::runtime_data::EngineTimeData;
 
 pub fn test_screen(time: &EngineTimeData, gui_rects: &mut GUIRects, screen_size: UVec2) {
     ElementBuilder::new(vec2(10.0, 10.0), vec2(10.0, 10.0))

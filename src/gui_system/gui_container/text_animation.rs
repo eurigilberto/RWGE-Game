@@ -15,7 +15,7 @@ use rwge::{
 
 use crate::{
     gui_system::window_layout::depth_offset,
-    public_data::{self, utils::get_time, PublicData},
+    runtime_data::{self, utils::get_time, RuntimeData},
 };
 
 use super::{render_container_background, GUIContainer};
@@ -100,19 +100,17 @@ impl TextAnimationData {
     }
 }
 
-fn contains_instance_anim(public_data: &PublicData, id: Uuid) -> bool {
-    public_data
-        .collection
-        .get::<TextAnimationData>()
+fn contains_instance_anim(runtime_data: &RuntimeData, id: Uuid) -> bool {
+    runtime_data
+        .get_pub::<TextAnimationData>()
         .unwrap()
         .instance_queues
         .contains_key(&id)
 }
 
-fn get_instance_word_anim(public_data: &PublicData, id: Uuid) -> &WordAnimation {
-    public_data
-        .collection
-        .get::<TextAnimationData>()
+fn get_instance_word_anim(runtime_data: &RuntimeData, id: Uuid) -> &WordAnimation {
+    runtime_data
+        .get_pub::<TextAnimationData>()
         .unwrap()
         .get_instance_word_anim(id)
 }
@@ -147,7 +145,7 @@ impl GUIContainer for TextAnimation {
     fn handle_event(
         &mut self,
         event: &mut rwge::gui::rect_ui::event::UIEvent,
-        public_data: &crate::public_data::PublicData,
+        runtime_data: &crate::runtime_data::RuntimeData,
         container_info: crate::gui_system::ContainerInfo,
         control_state: &mut crate::gui_system::control::ControlState,
     ) {
@@ -155,18 +153,20 @@ impl GUIContainer for TextAnimation {
         if self.first_update_done == false {
             if let UIEvent::Update = event {
                 let uuid = self.uuid;
-                public_data.push_mut(Box::new(move |public_data| {
-                    public_data
-                        .get_mut::<TextAnimationData>()
-                        .unwrap()
-                        .insert_queue(uuid);
-                }));
+                runtime_data
+                    .public_data
+                    .push_mut(Box::new(move |public_data| {
+                        public_data
+                            .get_mut::<TextAnimationData>()
+                            .unwrap()
+                            .insert_queue(uuid);
+                    }));
                 self.first_update_done = true;
             }
         } else {
             if let UIEvent::Update = event {
-                let current_time = get_time(public_data).time;
-                let word_anim = get_instance_word_anim(public_data, self.uuid);
+                let current_time = get_time(runtime_data).time;
+                let word_anim = get_instance_word_anim(runtime_data, self.uuid);
                 let mut anim_instances = word_anim.anims.borrow_mut();
 
                 let mut delete_ad_indices = Vec::with_capacity(anim_instances.len());
@@ -197,51 +197,19 @@ impl GUIContainer for TextAnimation {
 
                                 if char_time > 1.0 {
                                     delete_indices.push(char_index);
-                                }
-
-                                let char_time = char_time.max(0.0).min(1.0);
-
-                                {
-                                    let to_box_time = ((char_time - ANIM_TO_BOX.0) / ANIM_TO_BOX.1)
-                                        .max(0.0)
-                                        .min(1.0);
-                                    let to_box_time = easeInBack(to_box_time);
-
-                                    let to_circle_time = ((char_time - ANIM_TO_ROTATION.0)
-                                        / ANIM_TO_ROTATION.1)
-                                        .max(0.0)
-                                        .min(1.0);
-                                    let to_circle_time = easeOutBack(to_circle_time);
-
-                                    let to_center_fade = ((char_time - ANIM_TO_CENTER_FADE.0)
-                                        / ANIM_TO_CENTER_FADE.1)
-                                        .max(0.0)
-                                        .min(1.0);
-                                    let to_center_fade = easeInBack(to_center_fade);
-
-                                    let font_position =
-                                        font_elem.rect.position + anim.initial_offset;
-                                    let rotation = current_time
-                                        + anim.rand_value * 6.28
-                                        + (font_elem.rect.position.x as f32) * 0.01;
-                                    let rotation_offset =
-                                        vec2(f32::sin(rotation), f32::cos(rotation))
-                                            * container_info.rect.width()
-                                            * 0.35;
-
-                                    *offset = (final_offset - font_position) * to_box_time
-                                        + rotation_offset * to_circle_time * (1.0 - to_center_fade);
-                                    *scale = vec2(1.0 - to_center_fade, 1.0 - to_center_fade);
-                                    *color = RGBA::WHITE.lerp_rgba(
-                                        &HSLA {
-                                            h: ((anim.rand_value + (char_index as f32) * 0.25) * 360.0) % 360.0,
-                                            s: 0.5,
-                                            l: 0.5,
-                                            a: 1.0 - to_center_fade,
-                                        }
-                                        .into(),
-                                        to_box_time,
-                                    )
+                                } else {
+                                    letter_animation(
+                                        current_time,
+                                        offset,
+                                        scale,
+                                        color,
+                                        font_elem,
+                                        char_index,
+                                        anim.initial_offset,
+                                        final_offset,
+                                        container_info.rect.width(),
+                                        anim.rand_value,
+                                    );
                                 }
                             }
 
@@ -261,7 +229,7 @@ impl GUIContainer for TextAnimation {
                             }
                         }
                         None => {
-                            //anim.final_offset = Some(container_info.rect.position);
+                            //panic!("How did it get here?")
                         }
                     }
                     anim.final_offset = Some(container_info.rect.position);
@@ -280,28 +248,8 @@ impl GUIContainer for TextAnimation {
         {
             render_container_background(gui_rects, &container_info);
 
-            if contains_instance_anim(public_data, self.uuid) {
-                let word_anim = get_instance_word_anim(public_data, self.uuid);
-                let anim_data = word_anim.anims.borrow();
-                let mut render_elements: Vec<ElementBuilder> = Vec::new();
-
-                for data in anim_data.iter() {
-                    for (font_elem, (offset, (scale, color))) in data.font_elements.iter().zip(
-                        data.current_offset
-                            .iter()
-                            .zip(data.current_scale_mult.iter().zip(data.current_color.iter())),
-                    ) {
-                        let elem = ElementBuilder::new_with_rect(
-                            font_elem
-                                .rect
-                                .offset_position(data.initial_offset + *offset)
-                                .mul_size(*scale),
-                        )
-                        .set_sdffont(font_elem.tx_slice.into())
-                        .set_color((*color).into());
-                        render_elements.push(elem);
-                    }
-                }
+            if contains_instance_anim(runtime_data, self.uuid) {
+                let mut render_elements = render_word_animtion(runtime_data, self.uuid);
 
                 extra_render_steps.push(
                     Box::new(move |gui_rects| {
@@ -314,4 +262,83 @@ impl GUIContainer for TextAnimation {
             }
         }
     }
+}
+
+pub fn render_word_animtion(runtime_data: &RuntimeData, id: Uuid) -> Vec<ElementBuilder> {
+    let word_anim = get_instance_word_anim(runtime_data, id);
+    let anim_data = word_anim.anims.borrow();
+    let mut render_elements: Vec<ElementBuilder> = Vec::new();
+
+    for data in anim_data.iter() {
+        for (font_elem, (offset, (scale, color))) in data.font_elements.iter().zip(
+            data.current_offset.iter().zip(
+                data.current_scale_mult
+                    .iter()
+                    .zip(data.current_color.iter()),
+            ),
+        ) {
+            let elem = ElementBuilder::new_with_rect(
+                font_elem
+                    .rect
+                    .offset_position(data.initial_offset + *offset)
+                    .mul_size(*scale),
+            )
+            .set_sdffont(font_elem.tx_slice.into())
+            .set_color((*color).into());
+            render_elements.push(elem);
+        }
+    }
+    render_elements
+}
+
+
+
+pub fn letter_animation(
+    current_time: f32,
+    offset: &mut Vec2,
+    scale: &mut Vec2,
+    color: &mut RGBA,
+    font_elem: &FontElement,
+    char_index: usize,
+    initial_offset: Vec2,
+    final_offset: Vec2,
+    container_width: f32,
+    anim_rand_value: f32,
+) {
+    let char_time = current_time - (ANIM_OFFSET * char_index as f32);
+
+    let char_time = char_time.max(0.0).min(1.0);
+    let to_box_time = ((char_time - ANIM_TO_BOX.0) / ANIM_TO_BOX.1)
+        .max(0.0)
+        .min(1.0);
+    let to_box_time = easeInBack(to_box_time);
+
+    let to_circle_time = ((char_time - ANIM_TO_ROTATION.0) / ANIM_TO_ROTATION.1)
+        .max(0.0)
+        .min(1.0);
+    let to_circle_time = easeOutBack(to_circle_time);
+
+    let to_center_fade = ((char_time - ANIM_TO_CENTER_FADE.0) / ANIM_TO_CENTER_FADE.1)
+        .max(0.0)
+        .min(1.0);
+    let to_center_fade = easeInBack(to_center_fade);
+
+    let font_position = font_elem.rect.position + initial_offset;
+    let rotation =
+        current_time + anim_rand_value * 6.28 + (font_elem.rect.position.x as f32) * 0.01;
+    let rotation_offset = vec2(f32::sin(rotation), f32::cos(rotation)) * container_width * 0.35;
+
+    *offset = (final_offset - font_position) * to_box_time
+        + rotation_offset * to_circle_time * (1.0 - to_center_fade);
+    *scale = vec2(1.0 - to_center_fade, 1.0 - to_center_fade);
+    *color = RGBA::WHITE.lerp_rgba(
+        &HSLA {
+            h: ((anim_rand_value + (char_index as f32) * 0.25) * 360.0) % 360.0,
+            s: 0.5,
+            l: 0.5,
+            a: 1.0 - to_center_fade,
+        }
+        .into(),
+        to_box_time,
+    )
 }

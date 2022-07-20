@@ -11,7 +11,7 @@ use rwge::{
     Engine,
 };
 
-use crate::{as_any::AsAny, public_data::PublicData};
+use crate::{as_any::AsAny, runtime_data::RuntimeData};
 
 use super::{control::ControlState, ContainerInfo, window_layout::GUI_ACTIVE_COLOR};
 
@@ -20,7 +20,7 @@ pub trait GUIContainer: AsAny {
     fn handle_event(
         &mut self,
         event: &mut UIEvent,
-        public_data: &PublicData,
+        public_data: &RuntimeData,
         container_info: ContainerInfo,
         control_state: &mut ControlState,
     );

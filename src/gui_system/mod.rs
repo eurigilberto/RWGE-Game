@@ -34,9 +34,9 @@ use crate::{
         gui_container::{text_animation::TextAnimation, text_layout_test::TextLayoutTest},
         window_layout::TabsSlotKey,
     },
-    public_data::{
+    runtime_data::{
         utils::{get_engine_data, get_render_texture},
-        PublicData,
+        RuntimeData,
     },
 };
 
@@ -56,12 +56,12 @@ pub struct GUISystem {
 
 impl GUISystem {
     pub fn new(screen_size: UVec2) -> Self {
-        let mut container_collection = Slotmap::<Box<dyn GUIContainer>>::new_with_capacity(30);
+        let mut container_collection = Slotmap::<Box<dyn GUIContainer>>::with_capacity(30);
 
         let mut window_layouting = WindowSystem::new();
 
         //const ELLIPSIS: char = '…';
-        const COL_1: RGBA = RGBA::rgb(0.0, 0.25, 0.75);
+        const COL_1: RGBA = RGBA::rgb(0.0, 0.5, 0.5);
         const COL_2: RGBA = RGBA::rgb(0.75, 0.25, 0.0);
         const COL_3: RGBA = RGBA::rgb(0.1, 0.75, 0.25);
 
@@ -204,7 +204,7 @@ impl GUISystem {
         }
     }
 
-    pub fn handle_event(&mut self, event: &mut UIEvent, public_data: &mut PublicData) {
+    pub fn handle_event(&mut self, event: &mut UIEvent, public_data: &mut RuntimeData) {
         // Handle Any event FGUI
         match event {
             UIEvent::Resize(new_size) => {
@@ -215,7 +215,7 @@ impl GUISystem {
         self.window_layouting.handle_event(event, public_data)
     }
 
-    pub fn update(&mut self, public_data: &PublicData) {
+    pub fn update(&mut self, public_data: &RuntimeData) {
         /* Nothing yet - The UIEvent to be sent to the GUI containers is going to be created here */
         let mut event = UIEvent::Update;
         self.window_layouting.handle_event(&mut event, public_data)
@@ -230,7 +230,7 @@ impl GUISystem {
         engine: &Engine,
         gui_rects: &mut GUIRects,
         encoder: &mut rwge::wgpu::CommandEncoder,
-        public_data: &mut PublicData,
+        public_data: &mut RuntimeData,
     ) {
         gui_rects.rect_collection.clear_buffers();
         {

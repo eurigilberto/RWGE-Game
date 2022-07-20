@@ -20,7 +20,7 @@ use crate::{
         gui_container::text_animation::{TextAnimationData, WordAnimData, WordAnimation},
         ContainerInfo,
     },
-    public_data::utils::get_time,
+    runtime_data::utils::get_time,
 };
 
 use super::{render_container_background, GUIContainer};
@@ -37,6 +37,7 @@ pub struct TextLayoutTest {
     update_font: bool,
     pub font_index: usize,
     pub font_param: f32,
+    pub font_param_corrected: f32,
     pub font_active_id: Option<Uuid>,
     pub hovered_word: Option<WordRect>,
 
@@ -60,6 +61,7 @@ impl TextLayoutTest {
             update_font: false,
             font_index: 0,
             font_param: 0.0,
+            font_param_corrected: 0.0,
             font_active_id: None,
             hovered_word: None,
 
@@ -101,7 +103,7 @@ impl GUIContainer for TextLayoutTest {
     fn handle_event(
         &mut self,
         event: &mut rwge::gui::rect_ui::event::UIEvent,
-        public_data: &crate::public_data::PublicData,
+        runtime_data: &crate::runtime_data::RuntimeData,
         container_info: crate::gui_system::ContainerInfo,
         control_state: &mut crate::gui_system::control::ControlState,
     ) {
@@ -148,6 +150,7 @@ impl GUIContainer for TextLayoutTest {
             event,
             control_state,
         );
+        self.font_param_corrected = f32::powf(self.font_param, 3.5);
 
         match event {
             UIEvent::MouseMove { .. } | UIEvent::MouseButton(..) => {
@@ -276,7 +279,6 @@ impl GUIContainer for TextLayoutTest {
                             cont_rect.height(),
                             self.text_height,
                             self.scroll_offset,
-                            self.font_param,
                             self.first_line_height
                         ) + cont_rect.top_left_position();
 
@@ -300,9 +302,7 @@ impl GUIContainer for TextLayoutTest {
                         if let UIEvent::MouseButton(mouse_input) = event {
                             if mouse_input.is_left_pressed() && self.hovered_word.is_some() {
                                 let w_rect = self.hovered_word.unwrap();
-                                public_data
-                                    .collection
-                                    .get::<TextAnimationData>()
+                                runtime_data.get_pub::<TextAnimationData>()
                                     .unwrap()
                                     .push_anim_data(WordAnimData::new(
                                         w_rect.rect,
@@ -310,7 +310,7 @@ impl GUIContainer for TextLayoutTest {
                                             [w_rect.index..w_rect.index + w_rect.len]
                                             .to_vec(),
                                         text_render_offset,
-                                        get_time(public_data).time,
+                                        get_time(runtime_data).time,
                                     ))
                             }
                         }
@@ -323,7 +323,6 @@ impl GUIContainer for TextLayoutTest {
                         cont_rect.height(),
                         self.text_height,
                         self.scroll_offset,
-                        self.font_param,
                         self.first_line_height
                     ) + cont_rect.top_left_position();
 
@@ -331,7 +330,7 @@ impl GUIContainer for TextLayoutTest {
                         let w_rect = hovered
                             .rect
                             .offset_position(text_render_offset)
-                            .offset_size(get_padding(self.font_param));
+                            .offset_size(get_padding(self.font_param_corrected));
                         ElementBuilder::new_with_rect(w_rect)
                             .set_linear_gradient(
                                 LinearGradient {
@@ -356,10 +355,10 @@ impl GUIContainer for TextLayoutTest {
             if let UIEvent::Update = event {
                 if f32::abs(self.last_update_width - cont_rect.width()) > 0.5 || self.update_font {
                     let font_collection =
-                        &public_data.collection.get::<Vec<FontCollection>>().unwrap()[0];
+                        &runtime_data.get_pub::<Vec<FontCollection>>().unwrap()[0];
                     let (font_elems, word_rects, text_height, first_line_height) = create_multi_line(
                         &self.text,
-                        lerp_f32(FONT_SIZE_MIN_MAX.0, FONT_SIZE_MIN_MAX.1, self.font_param),
+                        lerp_f32(FONT_SIZE_MIN_MAX.0, FONT_SIZE_MIN_MAX.1, self.font_param_corrected),
                         font_collection,
                         self.font_index,
                         font_selectors[self.font_index].3,
@@ -367,9 +366,9 @@ impl GUIContainer for TextLayoutTest {
                         lerp_f32(
                             LINE_HEIGHT_MIN_MAX.0,
                             LINE_HEIGHT_MIN_MAX.1,
-                            self.font_param,
+                            self.font_param_corrected,
                         ),
-                        lerp_f32(PARA_SEP_MIN_MAX.0, PARA_SEP_MIN_MAX.1, self.font_param),
+                        lerp_f32(PARA_SEP_MIN_MAX.0, PARA_SEP_MIN_MAX.1, self.font_param_corrected),
                     );
 
                     self.first_line_height = first_line_height;
@@ -431,7 +430,6 @@ impl GUIContainer for TextLayoutTest {
                     cont_rect.height(),
                     self.text_height,
                     self.scroll_offset,
-                    self.font_param,
                     self.first_line_height
                 );
 
@@ -507,7 +505,6 @@ fn get_text_render_object(
     container_height: f32,
     text_height: f32,
     scroll_offset: f32,
-    font_param: f32,
     first_line: f32,
 ) -> Vec2 {
     let max_height = container_height - TEXT_START_OFFSET - TOP_MARGIN;

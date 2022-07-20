@@ -9,15 +9,18 @@ use window::UIWindow;
 //For now the style of the tabs is going to be fixed
 use rwge::{
     glam::Vec2,
-    gui::rect_ui::{
-        element::builder::ElementBuilder,
-        event::{ExtraRenderSteps, UIEvent},
-        GUIRects,
+    gui::{
+        self,
+        rect_ui::{
+            element::builder::ElementBuilder,
+            event::{ExtraRenderSteps, UIEvent},
+            GUIRects,
+        },
     },
     slotmap::slotmap::{SlotKey, Slotmap},
 };
 
-use crate::public_data::PublicData;
+use crate::runtime_data::RuntimeData;
 
 pub use tabs_container::{GUI_ACTIVE_COLOR, GUI_HOVER_COLOR, GUI_INACTIVE_COLOR};
 
@@ -38,13 +41,13 @@ rwge::create_custom_key!(
     WindowSlotKey;
 );
 
-impl Into<LayoutOrTabKey> for TabsSlotKey{
+impl Into<LayoutOrTabKey> for TabsSlotKey {
     fn into(self) -> LayoutOrTabKey {
         LayoutOrTabKey::TabKey(self)
     }
 }
 
-impl Into<LayoutOrTabKey> for LayoutSlotKey{
+impl Into<LayoutOrTabKey> for LayoutSlotKey {
     fn into(self) -> LayoutOrTabKey {
         LayoutOrTabKey::LayoutKey(self)
     }
@@ -91,12 +94,12 @@ impl WindowSystem {
     pub fn new() -> Self {
         Self {
             //gui instance
-            gui_container_slotmap: Slotmap::<Box<dyn GUIContainer>>::new_with_capacity(20),
+            gui_container_slotmap: Slotmap::<Box<dyn GUIContainer>>::with_capacity(20),
             //layout
-            tabs_slotmap: Slotmap::<TabsContainer>::new_with_capacity(10),
-            layout_slotmap: Slotmap::<LayoutElement>::new_with_capacity(20),
+            tabs_slotmap: Slotmap::<TabsContainer>::with_capacity(10),
+            layout_slotmap: Slotmap::<LayoutElement>::with_capacity(20),
             //windowing
-            window_collection: Slotmap::<UIWindow>::new_with_capacity(5),
+            window_collection: Slotmap::<UIWindow>::with_capacity(5),
             window_order: Vec::<WindowSlotKey>::with_capacity(5),
             //control
             control_state: ControlState::new(),
@@ -121,17 +124,11 @@ impl WindowSystem {
         window_key
     }
 
-    pub fn push_vertical(
-        &mut self,
-        children: Vec<DividedElement>,
-    ) -> Option<LayoutSlotKey> {
+    pub fn push_vertical(&mut self, children: Vec<DividedElement>) -> Option<LayoutSlotKey> {
         LayoutElement::create_vertical(children, &mut self.layout_slotmap)
     }
 
-    pub fn push_horizontal(
-        &mut self,
-        children: Vec<DividedElement>,
-    ) -> Option<LayoutSlotKey> {
+    pub fn push_horizontal(&mut self, children: Vec<DividedElement>) -> Option<LayoutSlotKey> {
         LayoutElement::create_horizontal(children, &mut self.layout_slotmap)
     }
 
@@ -149,20 +146,15 @@ impl WindowSystem {
     pub fn layouts_handle_event(
         control_state: &mut ControlState,
         layout_slotmap: &mut Slotmap<LayoutElement>,
-        window: &mut UIWindow,
+        root_layout: LayoutOrTabInfo,
         event: &mut UIEvent,
-        public_data: &PublicData,
+        public_data: &RuntimeData,
         depth_range: (u32, u32),
     ) -> Vec<TabLayoutInfo> {
         let mut tab_handle_stack = Vec::<TabLayoutInfo>::new();
         let mut layout_handle_stack = Vec::<LayoutOrTabInfo>::new();
 
-        layout_handle_stack.push(window.handle_event(
-            event,
-            public_data,
-            control_state,
-            depth_range,
-        ));
+        layout_handle_stack.push(root_layout);
 
         //println!("Layout handle push");
         loop {
@@ -198,11 +190,12 @@ impl WindowSystem {
     pub fn tabs_handle_event(
         control_state: &mut ControlState,
         tabs_slotmap: &mut Slotmap<TabsContainer>,
-        gui_container_slotmap: &mut Slotmap<Box<dyn GUIContainer>>,
+        gui_container_slotmap: &Slotmap<Box<dyn GUIContainer>>,
         mut tab_handle_stack: Vec<TabLayoutInfo>,
         event: &mut UIEvent,
-        public_data: &PublicData,
-    ) {
+        public_data: &RuntimeData,
+    ) -> Vec<GUIContainerInfo> {
+        let mut gui_handle_stack = Vec::with_capacity(tab_handle_stack.len());
         for (index, tab) in tab_handle_stack.drain(..).enumerate() {
             let tab_container = tabs_slotmap.get_value_mut(&tab.key).unwrap();
 
@@ -217,44 +210,59 @@ impl WindowSystem {
                 public_data,
                 tab.container_info,
                 control_state,
-                &tab_names
+                &tab_names,
             );
-
-            let gui_container = gui_container_slotmap
-                .get_value_mut(&gui_container_info.key)
-                .unwrap();
-            gui_container.handle_event(
-                event,
-                public_data,
-                gui_container_info.container_info,
-                control_state,
-            );
+            gui_handle_stack.push(gui_container_info);
         }
+        gui_handle_stack
     }
 
-    pub fn windows_handle_event(&mut self, event: &mut UIEvent, public_data: &PublicData) {
+    pub fn windows_handle_event(&mut self, event: &mut UIEvent, public_data: &RuntimeData) {
         for (index, window_key) in self.window_order.iter().enumerate() {
             match self.window_collection.get_value_mut(&window_key.0) {
                 Some(window_mut) => {
+                    let depth_range = (
+                        index as u32 * DEPTH_SLICE_SIZE,
+                        ((index as u32 + 1) * DEPTH_SLICE_SIZE) - 1,
+                    );
+
+                    let root_layout = window_mut.handle_event(
+                        event,
+                        public_data,
+                        &mut self.control_state,
+                        depth_range,
+                    );
+
                     let tab_handle_stack = WindowSystem::layouts_handle_event(
                         &mut self.control_state,
                         &mut self.layout_slotmap,
-                        window_mut,
+                        root_layout,
                         event,
                         public_data,
-                        (
-                            index as u32 * DEPTH_SLICE_SIZE,
-                            ((index as u32 + 1) * DEPTH_SLICE_SIZE) - 1,
-                        ),
+                        depth_range,
                     );
-                    WindowSystem::tabs_handle_event(
+
+                    let gui_handle_stack = WindowSystem::tabs_handle_event(
                         &mut self.control_state,
                         &mut self.tabs_slotmap,
-                        &mut self.gui_container_slotmap,
+                        &self.gui_container_slotmap,
                         tab_handle_stack,
                         event,
                         public_data,
                     );
+
+                    for gui_handle in gui_handle_stack {
+                        let gui_container = self
+                            .gui_container_slotmap
+                            .get_value_mut(&gui_handle.key)
+                            .unwrap();
+                        gui_container.handle_event(
+                            event,
+                            public_data,
+                            gui_handle.container_info,
+                            &mut self.control_state,
+                        );
+                    }
                 }
                 None => { /* No op */ }
             }
@@ -269,7 +277,7 @@ impl WindowSystem {
         }
     }
 
-    pub fn handle_event(&mut self, event: &mut UIEvent, public_data: &PublicData) {
+    pub fn handle_event(&mut self, event: &mut UIEvent, public_data: &RuntimeData) {
         self.control_state.on_gui_start();
         if let UIEvent::MouseMove { corrected, .. } = event {
             self.control_state.last_cursor_position = Some(*corrected);
@@ -288,7 +296,7 @@ impl WindowSystem {
         }
     }
 
-    pub fn render_event(&mut self, public_data: &PublicData, gui_rects: &mut GUIRects) {
+    pub fn render_event(&mut self, public_data: &RuntimeData, gui_rects: &mut GUIRects) {
         let extra_render_steps = ExtraRenderSteps::new(25);
         let mut event = UIEvent::Render {
             gui_rects,
