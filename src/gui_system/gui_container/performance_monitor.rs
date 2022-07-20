@@ -14,7 +14,7 @@ use rwge::{
 
 use crate::{
     gui_system::gui_container::render_container_background,
-    runtime_data::{utils::get_engine_data, RuntimeData},
+    runtime_data::{utils::get_engine_data, RuntimeData, PublicData},
 };
 
 use super::GUIContainer;
@@ -103,7 +103,7 @@ impl GUIContainer for PerformanceMonitor {
     fn handle_event(
         &mut self,
         event: &mut rwge::gui::rect_ui::event::UIEvent,
-        runtime_data: &crate::runtime_data::RuntimeData,
+        public_data: &PublicData,
         container_info: crate::gui_system::ContainerInfo,
         control_state: &mut crate::gui_system::control::ControlState,
     ) {
@@ -120,7 +120,7 @@ impl GUIContainer for PerformanceMonitor {
 
         match event {
             rwge::gui::rect_ui::event::UIEvent::Update => {
-                let op_time = &get_engine_data(runtime_data).operation_time;
+                let op_time = &get_engine_data(public_data).operation_time;
                 self.render_timer
                     .update_frame_data((op_time.render_time as f32) / 1000.0);
                 self.frame_timer
@@ -141,7 +141,7 @@ impl GUIContainer for PerformanceMonitor {
                     container_info.top_left_position() + vec2(MARGIN, -MARGIN);
 
                 let font_collection =
-                    &runtime_data.get_pub::<Vec<FontCollection>>().unwrap()[0];
+                    &public_data.get::<Vec<FontCollection>>().unwrap()[0];
 
                 let rect_mask_data_index = push_rect_mask(container_info.rect, gui_rects) as u16;
 

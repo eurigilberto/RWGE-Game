@@ -32,7 +32,7 @@ struct Game {
 }
 
 fn create_gui_copy_texture_to_surface(
-    public_data: &mut RuntimeData,
+    public_data: &mut runtime_data::PublicData,
     gui_rects: &GUIRects,
     engine: &Engine,
 ) -> CopyTextureToSurface {
@@ -83,7 +83,7 @@ impl Game {
         runtime_data.insert_pub(font_collections);
 
         let gui_copy_texture_surface =
-            create_gui_copy_texture_to_surface(&mut runtime_data, &gui_rects, engine);
+            create_gui_copy_texture_to_surface(&mut runtime_data.public_data, &gui_rects, engine);
 
         runtime_data.insert_pub(TextAnimationData::new());
 
@@ -99,7 +99,7 @@ impl Game {
 
 impl rwge::Runtime for Game {
     fn frame_start(&mut self, engine: &Engine) {
-        runtime_data::utils::update_engine_time(&mut self.runtime_data, &engine);
+        runtime_data::utils::update_engine_time(&mut self.runtime_data.public_data, &engine);
     }
 
     fn handle_event_queue<F>(
@@ -117,7 +117,7 @@ impl rwge::Runtime for Game {
                 let size_event = RenderSystem::resize_event_transformation(event);
                 if let Some(new_size) = size_event {
                     //Resize event
-                    runtime_data::utils::update_screen_size(&mut self.runtime_data, new_size);
+                    runtime_data::utils::update_screen_size(&mut self.runtime_data.public_data, new_size);
 
                     {
                         //Update GUI texture size
@@ -131,22 +131,19 @@ impl rwge::Runtime for Game {
                         self.gui_rects
                             .resize(new_size, &engine.render_system, rt_slotmap);
                     }
-
-                    /*let gui_color_rt = &self.gui_rects.get_color_rt(rt_slotmap);
-                    self.gui_copy_texture_surface
-                        .update_texture_view(&gui_color_rt.texture_view, &engine.render_system);*/
+                    
                     engine.render_system.render_window.resize(new_size);
 
                     let mut resize_ui_event = UIEvent::Resize(new_size);
                     self.gui_system
-                        .handle_event(&mut resize_ui_event, &mut self.runtime_data);
+                        .handle_event(&mut resize_ui_event, &mut self.runtime_data.public_data);
                 } else {
                     let gui_event = rwge::gui::rect_ui::event::default_event_transformation(
                         event,
                         engine.render_system.render_window.size,
                     );
                     if let Some(mut e) = gui_event {
-                        self.gui_system.handle_event(&mut e, &mut self.runtime_data);
+                        self.gui_system.handle_event(&mut e, &mut self.runtime_data.public_data);
                     }
                 }
             }
@@ -154,7 +151,7 @@ impl rwge::Runtime for Game {
     }
 
     fn update(&mut self, engine: &rwge::Engine, exit_event_loop: &mut dyn FnMut() -> ()) {
-        self.gui_system.update(&self.runtime_data);
+        self.gui_system.update(&self.runtime_data.public_data);
     }
 
     fn render(
@@ -177,10 +174,10 @@ impl rwge::Runtime for Game {
         );
 
         self.gui_system
-            .render(engine, &mut self.gui_rects, encoder, &mut self.runtime_data);
+            .render(engine, &mut self.gui_rects, encoder, &mut self.runtime_data.public_data);
 
         let color_rt = get_render_texture(
-            &self.runtime_data,
+            &self.runtime_data.public_data,
             &self.gui_rects.render_texture.color_texture_key,
         )
         .unwrap();
@@ -230,7 +227,7 @@ fn main() {
         .build(&event_loop)
         .expect("Window could not be created");
 
-    let engine = Engine::new(&window);
+    let engine = Engine::new(&window, 16666);
 
     let game = Game::new(&engine, window);
 

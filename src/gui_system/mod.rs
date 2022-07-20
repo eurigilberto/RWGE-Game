@@ -36,7 +36,7 @@ use crate::{
     },
     runtime_data::{
         utils::{get_engine_data, get_render_texture},
-        RuntimeData,
+        RuntimeData, PublicData,
     },
 };
 
@@ -204,7 +204,7 @@ impl GUISystem {
         }
     }
 
-    pub fn handle_event(&mut self, event: &mut UIEvent, public_data: &mut RuntimeData) {
+    pub fn handle_event(&mut self, event: &mut UIEvent, public_data: &mut PublicData) {
         // Handle Any event FGUI
         match event {
             UIEvent::Resize(new_size) => {
@@ -215,7 +215,7 @@ impl GUISystem {
         self.window_layouting.handle_event(event, public_data)
     }
 
-    pub fn update(&mut self, public_data: &RuntimeData) {
+    pub fn update(&mut self, public_data: &PublicData) {
         /* Nothing yet - The UIEvent to be sent to the GUI containers is going to be created here */
         let mut event = UIEvent::Update;
         self.window_layouting.handle_event(&mut event, public_data)
@@ -230,7 +230,7 @@ impl GUISystem {
         engine: &Engine,
         gui_rects: &mut GUIRects,
         encoder: &mut rwge::wgpu::CommandEncoder,
-        public_data: &mut RuntimeData,
+        public_data: &mut PublicData,
     ) {
         gui_rects.rect_collection.clear_buffers();
         {

@@ -1,4 +1,7 @@
-use std::cell::RefCell;
+use std::{
+    cell::RefCell,
+    ops::{Deref, DerefMut},
+};
 
 use rwge::{
     engine::{engine_time::EngineTime, op_time::OperationTime},
@@ -40,6 +43,20 @@ impl PublicData {
     }
 }
 
+impl Deref for PublicData {
+    type Target = Anymap;
+
+    fn deref(&self) -> &Self::Target {
+        &self.collection
+    }
+}
+
+impl DerefMut for PublicData {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.collection
+    }
+}
+
 pub struct RuntimeData {
     pub public_data: PublicData,
 }
@@ -57,16 +74,8 @@ impl RuntimeData {
         self.public_data.insert(data)
     }
 
-    pub fn push_pub_mut(&self, mutation: Box<dyn FnMut(&mut Anymap) -> ()>){
-        self.public_data.push_mut(mutation);
-    }
-
     pub fn apply_pub_mut(&mut self) {
         self.public_data.apply_mut();
-    }
-
-    pub fn get_pub<T: 'static>(&self) -> Option<&T> {
-        self.public_data.collection.get::<T>()
     }
 }
 
@@ -140,62 +149,46 @@ pub mod utils {
         winit, Engine,
     };
 
-    use super::{EngineData, EngineTimeData, RuntimeData};
+    use super::{EngineData, EngineTimeData, PublicData};
 
     /// Panic! if `RenderTextureSlotmap` is not present on the `PublicData` collection
     pub fn get_render_texture<'a>(
-        runtime_data: &'a RuntimeData,
+        public_data: &'a PublicData,
         key: &SlotKey,
     ) -> Option<&'a RenderTexture> {
-        let rt_slotmap = runtime_data
-            .public_data
-            .collection
-            .get::<Slotmap<RenderTexture>>();
+        let rt_slotmap = public_data.get::<Slotmap<RenderTexture>>();
         rt_slotmap
             .expect("Render Texture Slotmap not found")
             .get_value(key)
     }
 
     /// Panic! if `EngineData` is not present on the `PublicData` collection
-    pub fn update_engine_time(runtime_data: &mut RuntimeData, engine: &Engine) {
-        let engine_data = runtime_data
-            .public_data
-            .collection
-            .get_mut::<EngineData>()
-            .unwrap();
+    pub fn update_engine_time(public_data: &mut PublicData, engine: &Engine) {
+        let engine_data = public_data.get_mut::<EngineData>().unwrap();
         engine_data.time.update_time_data(&engine.time);
         engine_data.operation_time.copy_from(&engine.operation_time);
     }
 
     /// Panic! if `EngineData` is not present on the `PublicData` collection
-    pub fn update_screen_size(runtime_data: &mut RuntimeData, new_size: UVec2) {
-        let engine_data = runtime_data.public_data.collection.get_mut::<EngineData>().unwrap();
+    pub fn update_screen_size(public_data: &mut PublicData, new_size: UVec2) {
+        let engine_data = public_data.get_mut::<EngineData>().unwrap();
         engine_data.screen_size = new_size;
     }
 
     /// Panic! if `EngineData` is not present on the `PublicData` collection
-    pub fn get_engine_data(runtime_data: &RuntimeData) -> &EngineData {
-        runtime_data.get_pub().unwrap()
+    pub fn get_engine_data(public_data: &PublicData) -> &EngineData {
+        public_data.get().unwrap()
     }
 
-    pub fn get_time(runtime_data: &RuntimeData) -> &EngineTimeData {
-        &runtime_data
-            .public_data
-            .collection
-            .get::<EngineData>()
-            .unwrap()
-            .time
+    pub fn get_time(public_data: &PublicData) -> &EngineTimeData {
+        &public_data.get::<EngineData>().unwrap().time
     }
 
-    pub fn get_font_collections(runtime_data: &RuntimeData) -> &Vec<FontCollection> {
-        &runtime_data
-            .public_data
-            .collection
-            .get::<Vec<FontCollection>>()
-            .unwrap()
+    pub fn get_font_collections(public_data: &PublicData) -> &Vec<FontCollection> {
+        &public_data.get::<Vec<FontCollection>>().unwrap()
     }
 
-    pub fn get_window(runtime_data: &RuntimeData) -> &winit::window::Window {
-        runtime_data.get_pub().unwrap()
+    pub fn get_window(public_data: &PublicData) -> &winit::window::Window {
+        public_data.get().unwrap()
     }
 }

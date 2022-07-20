@@ -22,7 +22,7 @@ use crate::{
     },
     runtime_data::{
         utils::{get_engine_data, get_font_collections, get_time},
-        RuntimeData,
+        RuntimeData, PublicData,
     },
 };
 
@@ -62,7 +62,7 @@ impl TabsContainer {
         mut rect: Rect,
         rect_mask: &Rect,
         is_active_tab: bool,
-        public_data: &RuntimeData,
+        public_data: &PublicData,
         tab_name: &str,
     ) -> bool {
         let control_id = control_state.get_id();
@@ -161,7 +161,7 @@ impl TabsContainer {
         control_state: &mut ControlState,
         container_info: &ContainerInfo,
         event: &mut UIEvent,
-        public_data: &RuntimeData,
+        public_data: &PublicData,
         tab_rect: Rect,
         tab_names: &Vec<&str>,
     ) {
@@ -196,7 +196,7 @@ impl TabsContainer {
     pub fn handle_event(
         &mut self,
         event: &mut UIEvent,
-        public_data: &RuntimeData,
+        public_data: &PublicData,
         container_info: ContainerInfo,
         control_state: &mut ControlState,
         tab_names: &Vec<&str>,

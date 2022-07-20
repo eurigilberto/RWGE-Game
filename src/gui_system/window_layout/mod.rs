@@ -20,7 +20,7 @@ use rwge::{
     slotmap::slotmap::{SlotKey, Slotmap},
 };
 
-use crate::runtime_data::RuntimeData;
+use crate::runtime_data::{RuntimeData, PublicData};
 
 pub use tabs_container::{GUI_ACTIVE_COLOR, GUI_HOVER_COLOR, GUI_INACTIVE_COLOR};
 
@@ -148,7 +148,7 @@ impl WindowSystem {
         layout_slotmap: &mut Slotmap<LayoutElement>,
         root_layout: LayoutOrTabInfo,
         event: &mut UIEvent,
-        public_data: &RuntimeData,
+        public_data: &PublicData,
         depth_range: (u32, u32),
     ) -> Vec<TabLayoutInfo> {
         let mut tab_handle_stack = Vec::<TabLayoutInfo>::new();
@@ -193,7 +193,7 @@ impl WindowSystem {
         gui_container_slotmap: &Slotmap<Box<dyn GUIContainer>>,
         mut tab_handle_stack: Vec<TabLayoutInfo>,
         event: &mut UIEvent,
-        public_data: &RuntimeData,
+        public_data: &PublicData,
     ) -> Vec<GUIContainerInfo> {
         let mut gui_handle_stack = Vec::with_capacity(tab_handle_stack.len());
         for (index, tab) in tab_handle_stack.drain(..).enumerate() {
@@ -217,7 +217,7 @@ impl WindowSystem {
         gui_handle_stack
     }
 
-    pub fn windows_handle_event(&mut self, event: &mut UIEvent, public_data: &RuntimeData) {
+    pub fn windows_handle_event(&mut self, event: &mut UIEvent, public_data: &PublicData) {
         for (index, window_key) in self.window_order.iter().enumerate() {
             match self.window_collection.get_value_mut(&window_key.0) {
                 Some(window_mut) => {
@@ -277,7 +277,7 @@ impl WindowSystem {
         }
     }
 
-    pub fn handle_event(&mut self, event: &mut UIEvent, public_data: &RuntimeData) {
+    pub fn handle_event(&mut self, event: &mut UIEvent, public_data: &PublicData) {
         self.control_state.on_gui_start();
         if let UIEvent::MouseMove { corrected, .. } = event {
             self.control_state.last_cursor_position = Some(*corrected);
@@ -296,7 +296,7 @@ impl WindowSystem {
         }
     }
 
-    pub fn render_event(&mut self, public_data: &RuntimeData, gui_rects: &mut GUIRects) {
+    pub fn render_event(&mut self, public_data: &PublicData, gui_rects: &mut GUIRects) {
         let extra_render_steps = ExtraRenderSteps::new(25);
         let mut event = UIEvent::Render {
             gui_rects,

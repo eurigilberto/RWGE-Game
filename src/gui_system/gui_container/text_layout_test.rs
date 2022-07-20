@@ -20,7 +20,7 @@ use crate::{
         gui_container::text_animation::{TextAnimationData, WordAnimData, WordAnimation},
         ContainerInfo,
     },
-    runtime_data::utils::get_time,
+    runtime_data::{utils::get_time, PublicData},
 };
 
 use super::{render_container_background, GUIContainer};
@@ -103,7 +103,7 @@ impl GUIContainer for TextLayoutTest {
     fn handle_event(
         &mut self,
         event: &mut rwge::gui::rect_ui::event::UIEvent,
-        runtime_data: &crate::runtime_data::RuntimeData,
+        public_data: &PublicData,
         container_info: crate::gui_system::ContainerInfo,
         control_state: &mut crate::gui_system::control::ControlState,
     ) {
@@ -302,7 +302,7 @@ impl GUIContainer for TextLayoutTest {
                         if let UIEvent::MouseButton(mouse_input) = event {
                             if mouse_input.is_left_pressed() && self.hovered_word.is_some() {
                                 let w_rect = self.hovered_word.unwrap();
-                                runtime_data.get_pub::<TextAnimationData>()
+                                public_data.get::<TextAnimationData>()
                                     .unwrap()
                                     .push_anim_data(WordAnimData::new(
                                         w_rect.rect,
@@ -310,7 +310,7 @@ impl GUIContainer for TextLayoutTest {
                                             [w_rect.index..w_rect.index + w_rect.len]
                                             .to_vec(),
                                         text_render_offset,
-                                        get_time(runtime_data).time,
+                                        get_time(public_data).time,
                                     ))
                             }
                         }
@@ -355,7 +355,7 @@ impl GUIContainer for TextLayoutTest {
             if let UIEvent::Update = event {
                 if f32::abs(self.last_update_width - cont_rect.width()) > 0.5 || self.update_font {
                     let font_collection =
-                        &runtime_data.get_pub::<Vec<FontCollection>>().unwrap()[0];
+                        &public_data.get::<Vec<FontCollection>>().unwrap()[0];
                     let (font_elems, word_rects, text_height, first_line_height) = create_multi_line(
                         &self.text,
                         lerp_f32(FONT_SIZE_MIN_MAX.0, FONT_SIZE_MIN_MAX.1, self.font_param_corrected),

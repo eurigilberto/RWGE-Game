@@ -15,7 +15,7 @@ use rwge::{
 
 use crate::{
     gui_system::window_layout::depth_offset,
-    runtime_data::{self, utils::get_time, RuntimeData},
+    runtime_data::{self, utils::get_time, RuntimeData, PublicData},
 };
 
 use super::{render_container_background, GUIContainer};
@@ -100,17 +100,17 @@ impl TextAnimationData {
     }
 }
 
-fn contains_instance_anim(runtime_data: &RuntimeData, id: Uuid) -> bool {
-    runtime_data
-        .get_pub::<TextAnimationData>()
+fn contains_instance_anim(public_data: &PublicData, id: Uuid) -> bool {
+    public_data
+        .get::<TextAnimationData>()
         .unwrap()
         .instance_queues
         .contains_key(&id)
 }
 
-fn get_instance_word_anim(runtime_data: &RuntimeData, id: Uuid) -> &WordAnimation {
-    runtime_data
-        .get_pub::<TextAnimationData>()
+fn get_instance_word_anim(public_data: &PublicData, id: Uuid) -> &WordAnimation {
+    public_data
+        .get::<TextAnimationData>()
         .unwrap()
         .get_instance_word_anim(id)
 }
@@ -145,7 +145,7 @@ impl GUIContainer for TextAnimation {
     fn handle_event(
         &mut self,
         event: &mut rwge::gui::rect_ui::event::UIEvent,
-        runtime_data: &crate::runtime_data::RuntimeData,
+        public_data: &PublicData,
         container_info: crate::gui_system::ContainerInfo,
         control_state: &mut crate::gui_system::control::ControlState,
     ) {
@@ -153,8 +153,7 @@ impl GUIContainer for TextAnimation {
         if self.first_update_done == false {
             if let UIEvent::Update = event {
                 let uuid = self.uuid;
-                runtime_data
-                    .public_data
+                public_data
                     .push_mut(Box::new(move |public_data| {
                         public_data
                             .get_mut::<TextAnimationData>()
@@ -165,8 +164,8 @@ impl GUIContainer for TextAnimation {
             }
         } else {
             if let UIEvent::Update = event {
-                let current_time = get_time(runtime_data).time;
-                let word_anim = get_instance_word_anim(runtime_data, self.uuid);
+                let current_time = get_time(public_data).time;
+                let word_anim = get_instance_word_anim(public_data, self.uuid);
                 let mut anim_instances = word_anim.anims.borrow_mut();
 
                 let mut delete_ad_indices = Vec::with_capacity(anim_instances.len());
@@ -248,8 +247,8 @@ impl GUIContainer for TextAnimation {
         {
             render_container_background(gui_rects, &container_info);
 
-            if contains_instance_anim(runtime_data, self.uuid) {
-                let mut render_elements = render_word_animtion(runtime_data, self.uuid);
+            if contains_instance_anim(public_data, self.uuid) {
+                let mut render_elements = render_word_animtion(public_data, self.uuid);
 
                 extra_render_steps.push(
                     Box::new(move |gui_rects| {
@@ -264,8 +263,8 @@ impl GUIContainer for TextAnimation {
     }
 }
 
-pub fn render_word_animtion(runtime_data: &RuntimeData, id: Uuid) -> Vec<ElementBuilder> {
-    let word_anim = get_instance_word_anim(runtime_data, id);
+pub fn render_word_animtion(public_data: &PublicData, id: Uuid) -> Vec<ElementBuilder> {
+    let word_anim = get_instance_word_anim(public_data, id);
     let anim_data = word_anim.anims.borrow();
     let mut render_elements: Vec<ElementBuilder> = Vec::new();
 

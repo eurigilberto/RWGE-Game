@@ -22,7 +22,7 @@ use crate::{
     },
     runtime_data::{
         utils::{get_engine_data, get_font_collections, get_time},
-        RuntimeData,
+        RuntimeData, PublicData,
     },
 };
 
@@ -116,7 +116,7 @@ impl GUIContainer for ContainerOne {
     fn handle_event(
         &mut self,
         event: &mut UIEvent,
-        public_data: &RuntimeData,
+        public_data: &PublicData,
         container_info: ContainerInfo,
         control_state: &mut ControlState,
     ) {
