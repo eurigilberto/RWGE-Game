@@ -9,8 +9,7 @@ use rwge::{
     glam::{vec2, Vec2},
     gui::rect_ui::{element::builder::ElementBuilder, event::UIEvent, Rect},
     math_utils::{easeInBack, easeOutBack},
-    slotmap::slotmap::Slotmap,
-    uuid::Uuid,
+    uuid::Uuid, engine::time::Second,
 };
 
 use crate::{
@@ -25,7 +24,7 @@ pub struct WordAnimData {
     word_rect: Rect,
     font_elements: Vec<FontElement>,
     initial_offset: Vec2,
-    initial_time: f32,
+    initial_time: Second,
     final_offset: Option<Vec2>,
 
     current_offset: Vec<Vec2>,
@@ -41,7 +40,7 @@ impl WordAnimData {
         word_rect: Rect,
         font_elements: Vec<FontElement>,
         initial_offset: Vec2,
-        initial_time: f32,
+        initial_time: Second,
     ) -> Self {
         let char_count = font_elements.len();
         Self {
@@ -174,7 +173,7 @@ impl GUIContainer for TextAnimation {
                     match anim.final_offset {
                         Some(final_offset) => {
                             let delta_time = current_time - anim.initial_time;
-                            let norm_time = delta_time / ANIM_DURATION;
+                            let norm_time = delta_time.0 / ANIM_DURATION;
                             let current_time = norm_time * total_duration;
 
                             let mut delete_indices = Vec::with_capacity(anim.font_elements.len());

@@ -1,5 +1,5 @@
 use rwge::{
-    color::RGBA,
+    color::*,
     font::{font_layout::create_single_line, font_load_gpu::FontCollection},
     glam::{vec2, Vec2},
     gui::rect_ui::{
@@ -122,14 +122,14 @@ impl GUIContainer for PerformanceMonitor {
             rwge::gui::rect_ui::event::UIEvent::Update => {
                 let op_time = &get_engine_data(public_data).operation_time;
                 self.render_timer
-                    .update_frame_data((op_time.render_time as f32) / 1000.0);
+                    .update_frame_data(op_time.render_time.as_millisecond().0);
                 self.frame_timer
-                    .update_frame_data((op_time.get_total_time() as f32) / 1000.0);
+                    .update_frame_data(op_time.get_total_time().as_millisecond().0);
                 self.cpu_timer.update_frame_data(
-                    ((op_time.update_time + op_time.event_handling_time) as f32) / 1000.0,
+                    (op_time.update_time + op_time.event_handling_time).as_millisecond().0,
                 );
                 self.gpu_lock_time
-                    .update_frame_data((op_time.gpu_lock_time as f32) / 1000.0);
+                    .update_frame_data(op_time.gpu_lock_time.as_millisecond().0);
             }
             rwge::gui::rect_ui::event::UIEvent::Render {
                 gui_rects,

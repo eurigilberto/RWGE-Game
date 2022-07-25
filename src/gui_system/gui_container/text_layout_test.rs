@@ -1,5 +1,5 @@
 use rwge::{
-    color::RGBA,
+    color::*,
     font::{
         font_layout::{create_multi_line, create_single_line, FontElement, WordRect},
         font_load_gpu::FontCollection,

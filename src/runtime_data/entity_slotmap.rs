@@ -5,7 +5,7 @@ use std::{
 };
 
 use rwge::{
-    slotmap::slotmap::{SlotKey, Slotmap},
+    slotmap::prelude::*,
     uuid::Uuid,
 };
 

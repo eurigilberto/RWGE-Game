@@ -10,15 +10,15 @@ mod gui_system;
 use gui_system::{gui_container::text_animation::TextAnimationData, GUISystem};
 
 use rwge::{
-    color::RGBA,
+    color::*,
     font::font_load_gpu::write_font_to_gpu,
-    glam::uvec2,
+    glam::*,
     gui::rect_ui::event::UIEvent,
-    render_system::copy_texture_to_surface::CopyTextureToSurface,
-    render_system::{render_texture::RenderTexture, RenderSystem},
-    slotmap::slotmap::Slotmap,
+    graphics::copy_texture_to_surface::CopyTextureToSurface,
+    graphics::{render_texture::RenderTexture, Graphics},
+    slotmap::prelude::*,
     winit::window::Window,
-    Engine,
+    Engine, engine::time::Microsecond,
 };
 mod anymap;
 mod as_any;
@@ -41,17 +41,17 @@ fn create_gui_copy_texture_to_surface(
         &gui_rects.render_texture.color_texture_key,
     )
     .expect("GUI Color render texture not found");
-    CopyTextureToSurface::new(&engine.render_system, &color_rt.texture_view)
+    CopyTextureToSurface::new(&engine.graphics, &color_rt.texture_view)
 }
 
 impl Game {
     fn new(engine: &Engine, window: Window) -> Self {
-        let size = engine.render_system.render_window.size.clone();
+        let size = engine.graphics.render_window.size.clone();
 
         let mut render_texture_slotmap = Slotmap::<RenderTexture>::with_capacity(10);
 
         let gui_rects = GUIRects::new(
-            &engine.render_system,
+            &engine.graphics,
             &engine.system_bind_group_layout,
             size,
             &mut render_texture_slotmap,
@@ -69,7 +69,7 @@ impl Game {
 
         let default_fonts = load_default_font_data();
         let font_slices = write_font_to_gpu(
-            &engine.render_system.render_window.queue,
+            &engine.graphics.queue,
             &gui_rects.texture_atlas.texture,
             &default_fonts,
             uvec2(1024, 1024),
@@ -114,7 +114,7 @@ impl rwge::Runtime for Game {
             let close_event_handled = rwge::default_close_event_handler(event, exit_event_loop);
 
             if !close_event_handled {
-                let size_event = RenderSystem::resize_event_transformation(event);
+                let size_event = Graphics::resize_event_transformation(event);
                 if let Some(new_size) = size_event {
                     //Resize event
                     runtime_data::utils::update_screen_size(&mut self.runtime_data.public_data, new_size);
@@ -129,10 +129,10 @@ impl rwge::Runtime for Game {
                             .expect("Render texture slotmap not found");
 
                         self.gui_rects
-                            .resize(new_size, &engine.render_system, rt_slotmap);
+                            .resize(new_size, &engine.graphics, rt_slotmap);
                     }
                     
-                    engine.render_system.render_window.resize(new_size);
+                    engine.graphics.resize(new_size);
 
                     let mut resize_ui_event = UIEvent::Resize(new_size);
                     self.gui_system
@@ -140,7 +140,7 @@ impl rwge::Runtime for Game {
                 } else {
                     let gui_event = rwge::gui::rect_ui::event::default_event_transformation(
                         event,
-                        engine.render_system.render_window.size,
+                        engine.graphics.render_window.size,
                     );
                     if let Some(mut e) = gui_event {
                         self.gui_system.handle_event(&mut e, &mut self.runtime_data.public_data);
@@ -164,7 +164,7 @@ impl rwge::Runtime for Game {
         self.runtime_data.apply_pub_mut();
         ///////// APPLY PUBLIC DATA CHANGES
 
-        rwge::render_system::texture::clear_render_targets(
+        rwge::graphics::texture::clear_render_targets(
             encoder,
             screen_view,
             RGBA::rrr1((0.12 as f32).powf(2.2)).into(),
@@ -184,7 +184,7 @@ impl rwge::Runtime for Game {
 
         self.gui_copy_texture_surface.render(
             encoder,
-            &engine.render_system.render_window.device,
+            &engine.graphics.device,
             screen_view,
             &color_rt.texture_view,
         );
@@ -198,7 +198,7 @@ impl rwge::Runtime for Game {
             .window_layouting
             .control_state
             .on_frame_end();
-        engine.render_system.destroy_queued_textures();
+        engine.graphics.destroy_queued_textures();
     }
 
     fn before_exit(&mut self, engine: &rwge::Engine) {
@@ -227,7 +227,7 @@ fn main() {
         .build(&event_loop)
         .expect("Window could not be created");
 
-    let engine = Engine::new(&window, 16666);
+    let engine = Engine::new(&window, Microsecond(16666));
 
     let game = Game::new(&engine, window);
 

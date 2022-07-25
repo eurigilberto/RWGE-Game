@@ -1,5 +1,5 @@
 use rwge::{
-    color::RGBA,
+    color::*,
     glam::{vec2, Vec2},
     gui::rect_ui::{
         element::{builder::ElementBuilder, LinearGradient, Border},

@@ -4,9 +4,8 @@ use std::{
 };
 
 use rwge::{
-    engine::{engine_time::EngineTime, op_time::OperationTime},
     glam::UVec2,
-    Engine,
+    Engine, engine::{operation_timer::OperationTimer, engine_timer::EngineTimer, time::{Second, Millisecond, Microsecond, FrameNumber}},
 };
 
 mod entity_slotmap;
@@ -81,12 +80,12 @@ impl RuntimeData {
 
 #[derive(Default)]
 pub struct EngineTimeData {
-    pub time: f32,
-    pub time_millis: f32,
-    pub delta_time: f32,
-    pub delta_time_millis: f32,
-    pub time_millis_since_start: u128,
-    pub frame_count: u32,
+    pub time: Second,
+    pub time_millis: Millisecond,
+    pub delta_time: Second,
+    pub delta_time_millis: Millisecond,
+    pub time_millis_since_start: Microsecond,
+    pub frame_count: FrameNumber,
 }
 
 #[allow(dead_code)]
@@ -107,12 +106,12 @@ impl EngineTimeData {
 
 pub struct EngineData {
     pub time: EngineTimeData,
-    pub operation_time: OperationTime,
+    pub operation_time: OperationTimer,
     pub screen_size: UVec2,
 }
 
 impl EngineTimeData {
-    pub fn update_time_data(&mut self, engine_time: &EngineTime) {
+    pub fn update_time_data(&mut self, engine_time: &EngineTimer) {
         self.time = engine_time.time_data.time;
         self.time_millis = engine_time.time_data.time_millis;
         self.delta_time = engine_time.time_data.delta_time;
@@ -125,10 +124,10 @@ impl EngineTimeData {
 impl EngineData {
     pub fn new_from_engine(engine: &Engine) -> Self {
         let mut time = EngineTimeData::default();
-        time.update_time_data(&engine.time);
+        time.update_time_data(&engine.timer);
 
-        let mut operation_time = OperationTime::new();
-        operation_time.copy_from(&engine.operation_time);
+        let mut operation_time = OperationTimer::new();
+        operation_time.copy_from(&engine.operation_timer);
 
         Self {
             time,
@@ -141,11 +140,10 @@ impl EngineData {
 #[allow(dead_code)]
 pub mod utils {
     use rwge::{
-        engine::engine_time::EngineTime,
         font::font_load_gpu::FontCollection,
         glam::UVec2,
-        render_system::render_texture::RenderTexture,
-        slotmap::slotmap::{SlotKey, Slotmap},
+        graphics::render_texture::RenderTexture,
+        slotmap::prelude::*,
         winit, Engine,
     };
 
@@ -165,8 +163,8 @@ pub mod utils {
     /// Panic! if `EngineData` is not present on the `PublicData` collection
     pub fn update_engine_time(public_data: &mut PublicData, engine: &Engine) {
         let engine_data = public_data.get_mut::<EngineData>().unwrap();
-        engine_data.time.update_time_data(&engine.time);
-        engine_data.operation_time.copy_from(&engine.operation_time);
+        engine_data.time.update_time_data(&engine.timer);
+        engine_data.operation_time.copy_from(&engine.operation_timer);
     }
 
     /// Panic! if `EngineData` is not present on the `PublicData` collection

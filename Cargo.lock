@@ -475,7 +475,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d8bd5877156a19b8ac83a29b2306fe20537429d318f3ff0a1a2119f8d9c61919"
 dependencies = [
  "js-sys",
- "slotmap",
+ "slotmap 1.0.6",
  "wasm-bindgen",
  "web-sys",
 ]
@@ -1075,6 +1075,7 @@ dependencies = [
  "sdf_glyph_renderer",
  "serde",
  "serde_json",
+ "slotmap 0.1.0",
  "uuid",
  "wgpu",
  "winit",
@@ -1144,6 +1145,10 @@ dependencies = [
  "ryu",
  "serde",
 ]
+
+[[package]]
+name = "slotmap"
+version = "0.1.0"
 
 [[package]]
 name = "slotmap"

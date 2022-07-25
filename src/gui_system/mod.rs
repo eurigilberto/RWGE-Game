@@ -19,13 +19,13 @@ impl ContainerInfo {
 }
 
 use rwge::{
-    color::RGBA,
+    color::*,
     glam::{UVec2, Vec2},
     gui::rect_ui::{
         event::UIEvent,
         GUIRects, Rect,
     },
-    slotmap::slotmap::Slotmap,
+    slotmap::Slotmap,
     Engine,
 };
 
@@ -238,7 +238,7 @@ impl GUISystem {
         }
         gui_rects
             .rect_collection
-            .update_gpu_buffers(&engine.render_system);
+            .update_gpu_buffers(&engine.graphics);
 
         {
             let color_rt =

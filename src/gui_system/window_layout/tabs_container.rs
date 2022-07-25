@@ -1,28 +1,22 @@
-use std::{cell::RefCell, sync::Arc};
-
 use rwge::{
-    color::{HSLA, RGBA},
+    color::*,
     font::font_layout::create_single_line,
-    glam::{vec2, Vec2},
+    glam::*,
     gui::rect_ui::{
-        element::{builder::ElementBuilder, Border, LinearGradient},
-        event::{MouseInput, UIEvent},
+        element::{builder::ElementBuilder, LinearGradient},
+        event::UIEvent,
         BorderRadius, GUIRects, Rect,
     },
-    math_utils::lerp_f32,
-    slotmap::slotmap::Slotmap,
-    winit::event::{ElementState, MouseButton},
 };
 
 use crate::{
     gui_system::{
         control::{ControlState, State},
-        gui_container::GUIContainer,
         ContainerInfo,
     },
     runtime_data::{
-        utils::{get_engine_data, get_font_collections, get_time},
-        RuntimeData, PublicData,
+        utils::{get_font_collections, get_time},
+        PublicData,
     },
 };
 
@@ -82,10 +76,7 @@ impl TabsContainer {
             }
         }
 
-        if let UIEvent::Render {
-            gui_rects,..
-        } = event
-        {
+        if let UIEvent::Render { gui_rects, .. } = event {
             let (round_rect, color) = if is_active_tab {
                 rect = rect
                     .offset_position(-vec2(0.0, TAB_GAP * 0.5))
@@ -165,18 +156,17 @@ impl TabsContainer {
         tab_rect: Rect,
         tab_names: &Vec<&str>,
     ) {
-
         let mut current_pos = tab_rect.left_position();
 
         for index in 0..self.tabs.len() {
             let tab_btn_pos = current_pos + vec2(TAB_GAP + TAB_WIDTH * 0.5, 0.0);
             let tab_btn_size = vec2(TAB_WIDTH, tab_rect.size.y - TAB_GAP * 2.0);
-            
-            let rect = Rect{
+
+            let rect = Rect {
                 position: tab_btn_pos,
                 size: tab_btn_size,
             };
-            
+
             current_pos += vec2(TAB_GAP + TAB_WIDTH, 0.0);
 
             if Self::tab_button(
@@ -291,15 +281,20 @@ fn render_shadow_under_tab(
         end_position: vec2(0.0, -3.0),
     };
 
-    Box::new(move |gui_rects| {
-        if show_right_shadow {
+    let mut result_elems = Vec::with_capacity(2);
+    if show_right_shadow {
+        result_elems.push(
             ElementBuilder::new_with_rect(right_shadow_rect)
-                .set_linear_gradient(lin_gradient.into())
-                .build(gui_rects);
-        }
+                .set_linear_gradient(lin_gradient.into()),
+        );
+    }
+    result_elems.push(
+        ElementBuilder::new_with_rect(left_shadow_rect).set_linear_gradient(lin_gradient.into()),
+    );
 
-        ElementBuilder::new_with_rect(left_shadow_rect)
-            .set_linear_gradient(lin_gradient.into())
-            .build(gui_rects);
+    Box::new(move |gui_rects| {
+        for elem in result_elems.drain(..){
+            elem.build(gui_rects);
+        }
     })
 }

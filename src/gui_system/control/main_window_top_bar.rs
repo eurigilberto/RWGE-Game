@@ -1,5 +1,5 @@
 use rwge::{
-    color::RGBA,
+    color::*,
     glam::{ivec2, vec2, Vec2},
     gui::rect_ui::{element::builder::ElementBuilder, event::UIEvent, Rect},
     uuid::Uuid,

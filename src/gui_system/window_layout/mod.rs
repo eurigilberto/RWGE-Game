@@ -9,18 +9,14 @@ use window::UIWindow;
 //For now the style of the tabs is going to be fixed
 use rwge::{
     glam::Vec2,
-    gui::{
-        self,
-        rect_ui::{
-            element::builder::ElementBuilder,
-            event::{ExtraRenderSteps, UIEvent},
-            GUIRects,
-        },
+    gui::rect_ui::{
+        event::{ExtraRenderSteps, UIEvent},
+        GUIRects,
     },
-    slotmap::slotmap::{SlotKey, Slotmap},
+    slotmap::prelude::*,
 };
 
-use crate::runtime_data::{RuntimeData, PublicData};
+use crate::runtime_data::{PublicData, RuntimeData};
 
 pub use tabs_container::{GUI_ACTIVE_COLOR, GUI_HOVER_COLOR, GUI_INACTIVE_COLOR};
 
@@ -28,16 +24,16 @@ pub use self::layout::DividedElement;
 
 use super::{control::ControlState, gui_container::GUIContainer, ContainerInfo};
 
-rwge::create_custom_key!(
+create_custom_key!(
     GUIContainerSlotkey;
 );
-rwge::create_custom_key!(
+create_custom_key!(
     TabsSlotKey;
 );
-rwge::create_custom_key!(
+create_custom_key!(
     LayoutSlotKey;
 );
-rwge::create_custom_key!(
+create_custom_key!(
     WindowSlotKey;
 );
 
@@ -148,15 +144,12 @@ impl WindowSystem {
         layout_slotmap: &mut Slotmap<LayoutElement>,
         root_layout: LayoutOrTabInfo,
         event: &mut UIEvent,
-        public_data: &PublicData,
-        depth_range: (u32, u32),
     ) -> Vec<TabLayoutInfo> {
         let mut tab_handle_stack = Vec::<TabLayoutInfo>::new();
         let mut layout_handle_stack = Vec::<LayoutOrTabInfo>::new();
 
         layout_handle_stack.push(root_layout);
 
-        //println!("Layout handle push");
         loop {
             match layout_handle_stack.pop() {
                 Some(layout_handle) => match layout_handle.key {
@@ -196,13 +189,15 @@ impl WindowSystem {
         public_data: &PublicData,
     ) -> Vec<GUIContainerInfo> {
         let mut gui_handle_stack = Vec::with_capacity(tab_handle_stack.len());
-        for (index, tab) in tab_handle_stack.drain(..).enumerate() {
+        for tab in tab_handle_stack.drain(..) {
             let tab_container = tabs_slotmap.get_value_mut(&tab.key).unwrap();
 
             let tab_names: Vec<&str> = tab_container
                 .tabs
                 .iter()
-                .map(|gui_key| gui_container_slotmap.get_value(gui_key).unwrap().get_name())
+                .map(|gui_key| gui_container_slotmap.get_value(gui_key)
+                    .expect("Should never return none, removing a gui container should do the proper cleanup")
+                    .get_name())
                 .collect();
 
             let gui_container_info = tab_container.handle_event(
@@ -238,8 +233,6 @@ impl WindowSystem {
                         &mut self.layout_slotmap,
                         root_layout,
                         event,
-                        public_data,
-                        depth_range,
                     );
 
                     let gui_handle_stack = WindowSystem::tabs_handle_event(

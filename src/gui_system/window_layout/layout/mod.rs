@@ -1,8 +1,8 @@
 use rwge::{
-    color::RGBA,
+    color::*,
     glam::{vec2, Vec2},
     gui::rect_ui::{element::builder::ElementBuilder, event::UIEvent, Rect},
-    slotmap::slotmap::Slotmap,
+    slotmap::prelude::*,
 };
 
 use crate::gui_system::{

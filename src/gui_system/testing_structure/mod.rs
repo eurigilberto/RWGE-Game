@@ -1,5 +1,5 @@
 use rwge::{
-    color::RGBA,
+    color::*,
     font::font_atlas::FontAtlas,
     glam::{uvec2, vec2, UVec2},
     gui::rect_ui::{
@@ -146,13 +146,13 @@ pub fn test_screen(time: &EngineTimeData, gui_rects: &mut GUIRects, screen_size:
         .set_circle()
         .build(gui_rects);
 
-    let size_interp = ((f32::sin(time.time) * 50.0) + 100.0);
+    let size_interp = ((f32::sin(time.time.0) * 50.0) + 100.0);
     ElementBuilder::new(vec2(100.0, 500.0), vec2(size_interp, 70.0))
         .set_circle()
         .set_color(RGBA::GREY.into())
         .build(gui_rects);
 
-    let size_interp = ((f32::sin(time.time) * 50.0) + 100.0);
+    let size_interp = ((f32::sin(time.time.0) * 50.0) + 100.0);
     ElementBuilder::new(vec2(240.0, 100.0), vec2(size_interp, 70.0))
         .set_circle()
         .set_color(RGBA::RED.into())
@@ -261,7 +261,7 @@ pub fn test_screen(time: &EngineTimeData, gui_rects: &mut GUIRects, screen_size:
     let mask = MaskType::Circle { border: None };
     let color = ColoringType::LinearGradient(ExtraBufferData::NewData(LinearGradient {
         colors: [RGBA::RED, RGBA::WHITE],
-        start_position: vec2(f32::sin(time.time) * 20.0, 0.0),
+        start_position: vec2(f32::sin(time.time.0) * 20.0, 0.0),
         end_position: vec2(40.0, 0.0),
     }));
     create_new_rect_element(
@@ -285,7 +285,7 @@ pub fn test_screen(time: &EngineTimeData, gui_rects: &mut GUIRects, screen_size:
         start_position: vec2(sin_time * 20.0, sin_time * 20.0),
         end_position: vec2(40.0, 40.0),
     }));
-    let size_interp = ((f32::sin(time.time) * 50.0) as i32 + 100) as u32;
+    let size_interp = ((f32::sin(time.time.0) * 50.0) as i32 + 100) as u32;
     create_new_rect_element(
         gui_rects,
         uvec2(450, 100).as_vec2(),

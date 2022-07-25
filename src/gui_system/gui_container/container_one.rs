@@ -435,7 +435,7 @@ impl GUIContainer for ContainerOne {
                 }
 
                 //println!("Current delta time {}", (get_time(public_data).delta_time_millis));
-                let anim_scaler = (get_time(public_data).delta_time_millis) / 11.0;
+                let anim_scaler = (get_time(public_data).delta_time_millis.0) / 11.0;
                 //Update current values
                 anim_data.current_values.box_size = lerp_f32(
                     anim_data.current_values.box_size,
